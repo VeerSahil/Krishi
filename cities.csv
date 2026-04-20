@@ -1,0 +1,11 @@
+city_id,city_name,state,region
+C001,Pune,Maharashtra,West
+C002,Mumbai,Maharashtra,West
+C003,Delhi,Delhi,North
+C004,Bangalore,Karnataka,South
+C005,Hyderabad,Telangana,South
+C006,Chennai,Tamil Nadu,South
+C007,Kolkata,West Bengal,East
+C008,Ahmedabad,Gujarat,West
+C009,Jaipur,Rajasthan,North
+C010,Lucknow,Uttar Pradesh,North

@@ -1,0 +1,9 @@
+[
+  { "city_id": "C001", "city_name": "Pune", "state": "Maharashtra" },
+  { "city_id": "C002", "city_name": "Mumbai", "state": "Maharashtra" },
+  { "city_id": "C003", "city_name": "Delhi", "state": "Delhi" },
+  { "city_id": "C004", "city_name": "Bangalore", "state": "Karnataka" },
+  { "city_id": "C005", "city_name": "Hyderabad", "state": "Telangana" },
+  { "city_id": "C006", "city_name": "Chennai", "state": "Tamil Nadu" },
+  { "city_id": "C007", "city_name": "Kolkata", "state": "West Bengal" }
+]
