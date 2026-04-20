@@ -22,9 +22,15 @@ temp_category_map = {
 # 1. INITIALIZATION
 # ============================================
 
-# Initialize Firebase (only once)
+# Initialize Firebase (only once) — works both locally and on Render
 if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase_key.json")
+    import os, json, base64
+    fb_json_b64 = os.getenv("FIREBASE_KEY_JSON")
+    if fb_json_b64:
+        cred_dict = json.loads(base64.b64decode(fb_json_b64))
+        cred = credentials.Certificate(cred_dict)
+    else:
+        cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()

@@ -1,0 +1,10 @@
+fastapi==0.136.0
+uvicorn==0.44.0
+firebase-admin==7.4.0
+google-genai==1.73.1
+python-dotenv
+pydantic
+scikit-learn
+pandas
+numpy
+joblib

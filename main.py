@@ -30,9 +30,15 @@ GEMINI_MODEL = "gemini-2.5-flash"              # primary free-tier model
 GEMINI_FALLBACK_MODEL = "gemini-2.5-flash-lite" # lighter fallback if primary is quota-limited
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Initialize Firebase
+# Initialize Firebase — works both locally and on Render
 if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase_key.json")
+    fb_json_b64 = os.getenv("FIREBASE_KEY_JSON")
+    if fb_json_b64:
+        import json, base64
+        cred_dict = json.loads(base64.b64decode(fb_json_b64))
+        cred = credentials.Certificate(cred_dict)
+    else:
+        cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()

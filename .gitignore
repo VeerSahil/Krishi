@@ -1,5 +1,20 @@
-firebase_key.json
-*firebase-adminsdk*.json
+# Secrets - NEVER commit these
 .env
+firebase_key.json
+firebase_key.json.json
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+.Python
+env/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
