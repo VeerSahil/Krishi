@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183d32">
+  <meta name="description" content="Krishi administration — farmers, surveys and crop recommendations.">
+  <title>Krishi Admin · Farm operations</title>
+  <link rel="stylesheet" href="/admin/styles.css">
+  <script type="module" src="/admin/app.js"></script>
+</head>
+<body>
+  <div id="login-view" class="login-layout">
+    <section class="login-story" aria-label="Krishi administration">
+      <a class="brand" href="/admin/"><span class="brand-mark" aria-hidden="true">k</span><span>krishi<span class="brand-tag">ADMIN</span></span></a>
+      <div class="story-copy"><span class="eyebrow light">THE OPERATIONS DESK</span><h1>A clearer view<br>of every farm.</h1><p>Bring your farmers, field surveys and crop recommendations into one workspace.</p><div class="story-line" aria-hidden="true"></div><div class="story-points"><span>01 &nbsp; Know your farmers</span><span>02 &nbsp; Review every survey</span><span>03 &nbsp; Keep decisions moving</span></div></div>
+      <p class="story-footer">Connected to the Krishi farmer app.</p>
+    </section>
+    <main class="login-main">
+      <div class="login-card">
+        <span class="eyebrow">ADMINISTRATOR ACCESS</span>
+        <h2>Welcome back.</h2><p class="muted">Sign in to your farm operations workspace.</p>
+        <form id="login-form">
+          <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" placeholder="you@example.com" required>
+          <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+          <p id="login-error" class="error-text" role="alert"></p>
+          <button id="login-submit" class="button primary full" type="submit" disabled>Connecting… <span aria-hidden="true">↗</span></button>
+        </form>
+        <p class="muted connection-note">The first connection may take a moment.</p><p class="login-note"><span class="lock" aria-hidden="true">◇</span> For administrator accounts only.<br>Farmers use the Krishi phone app.</p>
+      </div>
+      <p class="login-bottom">Krishi · Smart agriculture, considered.</p>
+    </main>
+  </div>
+
+  <div id="dashboard-view" class="app-shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="/admin/"><span class="brand-mark" aria-hidden="true">k</span><span>krishi<span class="brand-tag">ADMIN</span></span></a>
+      <div class="workspace-label">WORKSPACE</div>
+      <nav aria-label="Main navigation">
+        <button class="nav-link active" data-view="overview" aria-current="page"><span aria-hidden="true">◫</span> Overview</button>
+        <button class="nav-link" data-view="farmers"><span aria-hidden="true">♧</span> Farmers</button>
+        <button class="nav-link" data-view="surveys"><span aria-hidden="true">▤</span> Surveys <span id="pending-nav-count" class="nav-count">—</span></button>
+      <button class="nav-link" data-view="support"><span aria-hidden="true">✉</span> Helpdesk <span id="support-nav-count" class="nav-count">—</span></button></nav>
+      <div class="sidebar-note"><span class="status-dot"></span> One connected workspace<p>Farmer app + admin dashboard</p></div>
+      <div class="sidebar-account"><span id="admin-avatar" class="avatar">A</span><div><strong>Administrator</strong><span id="admin-email"></span></div><button id="sign-out" class="icon-button" aria-label="Sign out" title="Sign out">↪</button></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div class="breadcrumb">WORKSPACE <span>/</span> <span id="breadcrumb-view">Overview</span></div><div class="topbar-right"><span id="updated-label" class="updated-label">Waiting for data</span><button id="refresh-button" class="button secondary small">↻ &nbsp;Refresh</button><button id="mobile-sign-out" class="button secondary small mobile-only">Sign out</button></div></header>
+      <div id="workspace-error" class="alert" role="alert" hidden></div>
+      <section id="overview-panel" class="view-panel">
+        <div class="page-heading"><div><span class="eyebrow">YOUR FARM NETWORK</span><h1>Operations overview<span class="heading-dot">.</span></h1><p class="muted">The people, surveys and decisions that need your attention.</p></div><span class="mode-label">Field team workflow</span></div>
+        <div class="stat-grid">
+          <article class="stat-card"><div class="stat-label">Registered farmers <span aria-hidden="true">♧</span></div><strong id="stat-farmers">—</strong><p>Across your farmer network</p></article>
+          <article class="stat-card attention"><div class="stat-label">Needs admin attention <span aria-hidden="true">◷</span></div><strong id="stat-pending">—</strong><p>New requests and reports to release</p></article>
+          <article class="stat-card"><div class="stat-label">Completed surveys <span aria-hidden="true">✓</span></div><strong id="stat-completed">—</strong><p>Recommendations delivered</p></article>
+          <article class="stat-card"><div class="stat-label">Total surveys <span aria-hidden="true">▤</span></div><strong id="stat-surveys">—</strong><p>All requests, every status</p></article>
+        </div>
+        <div class="overview-grid">
+          <article class="surface"><div class="section-heading"><div><h2>Recent surveys</h2><p>The latest activity from your farmers.</p></div><button class="text-button" data-open-view="surveys">View all ↗</button></div><div class="table-scroll"><table><thead><tr><th>Farmer</th><th>Farm</th><th>Status</th><th></th></tr></thead><tbody id="recent-surveys"></tbody></table></div><div id="recent-empty" class="empty-state" hidden>No surveys yet. New farmer requests will appear here.</div></article>
+          <article class="surface breakdown"><span class="eyebrow">AT A GLANCE</span><h2>Survey progress</h2><p class="muted">A status check on your network.</p><div id="status-breakdown"></div><div class="context-note">Admin approves a visit. Field team records the readings. Admin reviews and releases the recommendation.</div></article>
+        </div>
+        <div class="workflow-note"><span class="note-symbol" aria-hidden="true">↗</span><div><strong>From request to recommendation.</strong><p>Farmer requests → Admin approves → Team visits → Admin releases the crop result.</p></div><button class="text-button" id="open-pending">Review pending surveys →</button></div>
+      </section>
+
+      <section id="farmers-panel" class="view-panel" hidden>
+        <div class="page-heading"><div><span class="eyebrow">THE PEOPLE BEHIND THE FARMS</span><h1>Your farmers<span class="heading-dot">.</span></h1><p class="muted">Browse registered farmers and open their survey history.</p></div></div>
+        <article class="surface"><div class="section-heading"><div><h2>Farmer directory</h2><p id="farmer-page-label">Registered farmer accounts</p></div><label class="search-control"><span class="sr-only">Filter the farmers on this page</span><input id="farmer-search" type="search" placeholder="Filter this page by name or email"></label></div><div class="table-scroll"><table><thead><tr><th>Farmer</th><th>Email</th><th>Phone</th><th>Joined</th><th></th></tr></thead><tbody id="farmers-table"></tbody></table></div><div id="farmers-empty" class="empty-state" hidden>No farmers on this page.</div><div class="pagination"><span id="farmers-page">Page 1</span><div><button id="farmers-prev" class="button secondary small" disabled>← Previous</button><button id="farmers-next" class="button secondary small" disabled>Next →</button></div></div></article>
+      </section>
+
+      <section id="surveys-panel" class="view-panel" hidden>
+        <div class="page-heading"><div><span class="eyebrow">FIELD REQUESTS & RESULTS</span><h1>Survey workspace<span class="heading-dot">.</span></h1><p class="muted" id="survey-subtitle">Review requests and track recommendations across all farmers.</p></div><button id="clear-farmer-filter" class="button secondary small" hidden>Show all farmers</button></div>
+        <article class="surface"><div class="section-heading"><div><h2>Surveys</h2><p>Open a survey to review details or process a request.</p></div><label class="filter-control">Status <select id="survey-status"><option value="">All statuses</option><option value="pending">Approval requested</option><option value="approved">Visit approved</option><option value="in_progress">Team on site</option><option value="awaiting_review">Report ready for release</option><option value="completed">Completed</option><option value="rejected">Rejected</option><option value="failed">Failed</option></select></label></div><div class="table-scroll"><table><thead><tr><th>Farmer</th><th>Location & soil</th><th>Booked</th><th>Status</th><th>Recommendation</th><th></th></tr></thead><tbody id="surveys-table"></tbody></table></div><div id="surveys-empty" class="empty-state" hidden>No surveys match this view.</div><div class="pagination"><span id="surveys-page">Page 1</span><div><button id="surveys-prev" class="button secondary small" disabled>← Previous</button><button id="surveys-next" class="button secondary small" disabled>Next →</button></div></div></article>
+      </section>
+      <section id="support-panel" class="view-panel" hidden><div class="page-heading"><div><span class="eyebrow">HUMAN SUPPORT</span><h1>Farmer helpdesk<span class="heading-dot">.</span></h1><p class="muted">Reply directly to farmers who need your help.</p></div></div><article class="surface"><div class="table-scroll"><table><thead><tr><th>Farmer</th><th>Subject</th><th>Sent</th><th>Status</th><th></th></tr></thead><tbody id="support-table"></tbody></table></div><div id="support-empty" class="empty-state" hidden>No farmer messages yet.</div><div class="pagination"><span id="support-page">Page 1</span><div><button id="support-prev" class="button secondary small" disabled>← Previous</button><button id="support-next" class="button secondary small" disabled>Next →</button></div></div></article></section><footer class="workspace-footer"><span>Krishi administration</span><span>Refreshes every 30 seconds while this tab is visible.</span></footer>
+    </main>
+  </div>
+
+  <dialog id="survey-dialog" aria-labelledby="survey-dialog-title"><div class="dialog-heading"><div><span class="eyebrow">SURVEY DETAILS</span><h2 id="survey-dialog-title">Review survey</h2></div><button class="icon-button" id="close-survey" aria-label="Close survey">×</button></div><div id="survey-details" class="detail-grid"></div><div id="survey-result" class="result-block" hidden></div><form id="process-form"><div id="assignment-fields" hidden><div class="divider"></div><h3>Approve the farm visit</h3><p class="muted">Assign a field team member. Readings will be collected during the visit.</p><label for="team-assignee">Field team member</label><select id="team-assignee" required disabled><option value="">Choose a team member</option></select></div><label for="survey-notes">Admin notes (optional)</label><textarea id="survey-notes" rows="3" maxlength="2000"></textarea><p id="survey-error" class="error-text" role="alert"></p><div id="survey-actions" class="dialog-actions"><button type="button" id="reject-survey" class="button danger">Reject survey</button><button type="submit" id="approve-survey" class="button primary">Approve visit & assign team ↗</button></div></form></dialog>
+  <dialog id="farmer-dialog" aria-labelledby="farmer-dialog-title"><div class="dialog-heading"><div><span class="eyebrow">FARMER PROFILE</span><h2 id="farmer-dialog-title">Farmer</h2></div><button class="icon-button" id="close-farmer" aria-label="Close farmer profile">×</button></div><div id="farmer-details" class="detail-grid"></div><div id="farmer-summary" class="farmer-summary"></div><div class="dialog-actions"><button id="view-farmer-surveys" class="button primary">Open survey history ↗</button></div></dialog>
+  <dialog id="support-dialog" aria-labelledby="support-title"><div class="dialog-heading"><div><span class="eyebrow">FARMER MESSAGE</span><h2 id="support-title">Message</h2></div><button id="close-support" class="icon-button" aria-label="Close message">×</button></div><p id="support-sender" class="muted"></p><p id="support-message" class="message-copy"></p><form id="support-form"><label for="support-reply">Your reply to the farmer</label><textarea id="support-reply" rows="4" maxlength="4000" required></textarea><p id="support-error" class="error-text" role="alert"></p><button id="send-reply" type="submit" class="button primary full">Send reply to farmer ↗</button></form></dialog><div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

@@ -1,20 +1,49 @@
-# Secrets - NEVER commit these
+# Credentials and local configuration
 .env
+.env.*
+!.env.example
 firebase_key.json
 firebase_key.json.json
+*firebase-adminsdk*.json
+*.pem
+*.key
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 .Python
 env/
 venv/
+.venv/
 *.egg-info/
+.pytest_cache/
+.test-tmp/
+.coverage
+htmlcov/
 
-# Jupyter
+# Flutter / Android generated state
+.dart_tool/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+.gradle/
+local.properties
+*.iml
+*.jks
+*.keystore
+key.properties
+
+# Jupyter and editors
 .ipynb_checkpoints/
-
-# IDE
 .vscode/
 .idea/
+
+.tool-state/
+
+# Local Firebase rules tests
+node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

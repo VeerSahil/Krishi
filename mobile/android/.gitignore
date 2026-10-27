@@ -1,0 +1,11 @@
+# Keep the Gradle wrapper scripts and JAR in version control for fresh checkouts.
+/.gradle
+/captures/
+/local.properties
+GeneratedPluginRegistrant.java
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/to/reference-keystore
+key.properties
+**/*.keystore
+**/*.jks

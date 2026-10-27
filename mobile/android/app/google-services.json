@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "592352978657",
+    "project_id": "smart-agro-ai-fd974",
+    "storage_bucket": "smart-agro-ai-fd974.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:592352978657:android:e7573bcb0b639f2d0f39a0",
+        "android_client_info": {
+          "package_name": "com.sahil.krishi.krishi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1ypW4BB2dLfqbsEEkl279ZyEkAS0H7oI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

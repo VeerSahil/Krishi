@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function hasRole(role) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    function admin() { return hasRole('admin'); }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role == 'farmer'
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'createdAt']);
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'phone']);
+      // Only trusted project operators provision admin and team roles.
+      allow delete: if false;
+    }
+
+    match /farm_inputs/{surveyId} {
+      allow read: if signedIn() && (admin()
+        || resource.data.userId == request.auth.uid
+        || (hasRole('team') && resource.data.get('assignedTeamId', '') == request.auth.uid));
+      allow write: if false;
+    }
+
+    match /survey_predictions/{surveyId} {
+      // Draft recommendations must never be readable by farmers.
+      allow read: if admin();
+      allow write: if false;
+    }
+
+    match /support_threads/{threadId} {
+      allow read: if signedIn() && (admin() || resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
