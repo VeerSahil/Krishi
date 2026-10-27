@@ -18,9 +18,9 @@ APK. The live backend reports version `1.2.0`.
 
 Firebase rules and indexes were deployed to `smart-agro-ai-fd974`; the team
 assignment indexes are ready. Live verification confirmed team sign-in and the
-assigned approved visit in both the full and filtered API lists. Gemini is
-configured on Render; the reply from an existing farmer login is checked
-separately from configuration presence.
+assigned approved visit in both the full and filtered API lists. The operator
+also confirmed a chatbot reply in the Farmer APK and the visible assigned visit
+in the Team APK after deployment.
 
 Render Free sleeps after 15 minutes without traffic, and its next request can
 take about a minute to wake it. Firebase and Gemini usage remains subject to
@@ -391,7 +391,8 @@ Verified locally on 27–28 October 2026:
   Team 22.1 MiB, version 1.2.0 (code 3), Android API 21+, ARM32/ARM64/x86_64.
   Package names, launcher labels and independent Firebase app IDs were checked.
   Neither APK includes private `.env` or service-account files. Installation
-  and live sign-in on a physical Android device remain unverified.
+  on a physical Android device was checked by the operator, who confirmed a
+  Farmer APK chatbot reply and a visible Team APK assignment after deployment.
 - Firebase credentials parse and their project matches the Android config.
 - Live Firebase reads passed: 7 farmer profiles, 1 admin, 1 team member.
 - A real Gemini chatbot response passed with the local configuration.
@@ -401,8 +402,8 @@ Verified locally on 27–28 October 2026:
 
 Still unverified or blocked:
 
-- Cloud Gemini configuration is present. A reply from an existing farmer login
-  and a complete live survey still need verification by the operator. The
+- Cloud Gemini configuration is present and a live farmer reply was confirmed
+  by the operator. A complete live survey still needs operator verification. The
   existing assigned survey was deliberately left approved for the field visit.
 - Browser login pages and their configuration load successfully. The default
   fetch receiver issue was fixed and has a regression test. Interactive live
