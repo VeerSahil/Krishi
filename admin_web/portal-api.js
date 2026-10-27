@@ -15,7 +15,7 @@ const AUTH_ERRORS = {
 };
 
 export class AdminApi {
-  constructor({ baseUrl = '', fetcher = globalThis.fetch, timeoutMs = 90000, role = 'admin' } = {}) {
+  constructor({ baseUrl = '', fetcher = globalThis.fetch.bind(globalThis), timeoutMs = 90000, role = 'admin' } = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.role = role;
     this.fetcher = fetcher;

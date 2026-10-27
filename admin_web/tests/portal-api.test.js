@@ -21,6 +21,20 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 });
 const config = { apiKey: 'public-test-key', projectId: 'test-project', configured: true };
 
+test('default browser fetch keeps the global receiver when loading configuration', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async function (url) {
+    assert.equal(this, globalThis);
+    assert.equal(url, '/admin/config');
+    return json(config);
+  };
+  try {
+    assert.deepEqual(await new AdminApi().loadConfig(), config);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('sign-in verifies the admin role before returning dashboard data', async () => {
   const requests = [];
   const api = new AdminApi({ fetcher: async (url, options) => {

@@ -54,6 +54,19 @@ sensor feed. No automatic Arduino upload is implemented yet.
 
 ## Local backend
 
+On this configured Windows PC, double-click **`build.bat`** in the project root.
+It starts the backend and opens **http://127.0.0.1:8000/admin/**, or reuses an
+already running Krishi backend. Sign in with an existing account whose profile
+has `role: admin`. Keep the server console open while using the panel. This
+launcher serves the existing browser assets directly; no separate admin build
+or cloud deployment is needed.
+
+Optional commands: `build.bat --check` checks local readiness,
+`build.bat --no-browser` skips opening a browser, and `build.bat --port 8001`
+uses another local port. Python is selected from `.venv`, `venv`, then PATH;
+set `KRISHI_PYTHON` to a Python executable to override it. Missing dependencies
+are reported with an installation command.
+
 Use Python 3.13 and run these commands from this directory:
 
 ```powershell
@@ -162,6 +175,14 @@ Android product flavors:
 | --- | --- | --- | --- |
 | Krishi Farmer | `com.sahil.krishi.krishi` | `lib/main.dart` | `mobile/build/apks/krishi-farmer.apk` |
 | Krishi Team | `com.sahil.krishi.team` | `lib/main_team.dart` | `mobile/build/apks/krishi-team.apk` |
+
+To share the existing APKs, open WhatsApp Desktop/Web, select your friend's
+chat, choose the attachment button and **Document**, then select the two files
+from `mobile/build/apks/`. Your friend downloads and installs the appropriate
+APK on Android. Farmer users can sign up; team users need a provisioned team
+account. Both apps can be installed together. Complete use from another network
+requires the pending backend and Firebase rollout described below; running
+`build.bat` only opens the admin panel on this PC.
 
 The two apps have different launcher names/icons and can be installed together.
 The farmer package preserves the original app identity; both versions are
