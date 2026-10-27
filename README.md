@@ -5,6 +5,28 @@ Android apps in `mobile/`, and admin and field-team browser interfaces.
 All interfaces use the same Firebase project. Automatic Arduino-to-app transfer is deferred;
 the team enters the gadget readings manually for now.
 
+## Live deployment
+
+The three-role backend was deployed on 28 October 2026 to the existing Render
+**Free** service at https://krishi-backend-ox3u.onrender.com . Render deploys
+`codex/farmer-team-arduino-flow`; the GitHub default branch was not changed.
+Both existing APKs already use this URL, so this rollout does not require a new
+APK. The live backend reports version `1.2.0`.
+
+- Admin: https://krishi-backend-ox3u.onrender.com/admin/
+- Field team: https://krishi-backend-ox3u.onrender.com/team/
+
+Firebase rules and indexes were deployed to `smart-agro-ai-fd974`; the team
+assignment indexes are ready. Live verification confirmed team sign-in and the
+assigned approved visit in both the full and filtered API lists. Gemini is
+configured on Render; the reply from an existing farmer login is checked
+separately from configuration presence.
+
+Render Free sleeps after 15 minutes without traffic, and its next request can
+take about a minute to wake it. Firebase and Gemini usage remains subject to
+their existing project plans and quotas. This deployment did not enable billing
+or select a paid Render instance.
+
 ## Interfaces and responsibilities
 
 | User | Interface | Responsibilities |
@@ -137,10 +159,10 @@ backend. Firestore rules deny direct client writes. Readings and their draft
 prediction use one atomic batch with a version precondition. Publication checks
 that the draft matches the submitted report.
 
-`firestore.rules` and `firestore.indexes.json` are prepared, not deployed.
-Before enabling this workflow against real users, review them against the
-existing project. Deploy the compatible indexes and restrictive rules, wait for
-indexes to finish building, and then enable the new backend and clients.
+`firestore.rules` and `firestore.indexes.json` were deployed on 28 October 2026.
+For subsequent rollouts, review changes against the existing project. Deploy
+compatible indexes and restrictive rules, wait for indexes to finish building,
+and then enable the new backend and clients.
 In particular, draft privacy depends on the new rules being active before any
 real draft predictions are written. Use a coordinated rollout: older APKs do
 not implement this lifecycle and may attempt direct writes.
@@ -151,7 +173,7 @@ A trusted operator can deploy reviewed rules/indexes with:
 firebase deploy --project smart-agro-ai-fd974 --only firestore
 ```
 
-This command changes the remote project; it was not run during this work.
+This command changes the remote project. It was run for the initial three-role rollout.
 
 ## Separate Farmer and Team Android apps
 
@@ -180,9 +202,9 @@ To share the existing APKs, open WhatsApp Desktop/Web, select your friend's
 chat, choose the attachment button and **Document**, then select the two files
 from `mobile/build/apks/`. Your friend downloads and installs the appropriate
 APK on Android. Farmer users can sign up; team users need a provisioned team
-account. Both apps can be installed together. Complete use from another network
-requires the pending backend and Firebase rollout described below; running
-`build.bat` only opens the admin panel on this PC.
+account. Both apps can be installed together and use the deployed Render URL
+from other networks. Running `build.bat` opens the local admin panel on this PC;
+the live admin URL is listed above.
 
 The two apps have different launcher names/icons and can be installed together.
 The farmer package preserves the original app identity; both versions are
@@ -198,9 +220,8 @@ released results and cancelled visits are read-only. Starting a visit preserves
 readings already typed into the form. Team members cannot publish crop results.
 
 The default API URL remains https://krishi-backend-ox3u.onrender.com .
-The Android apps build locally, but the three-role backend still
-needs deployment at that address. The live `/cities` route returns HTTP 200;
-`/admin/` and `/team/` currently return HTTP 404.
+The three-role backend is live at that address. The `/admin/`, `/team/`,
+`/admin/config` and authenticated team visit routes were verified after deployment.
 
 On this Windows machine, Flutter's global `jdk-dir` points to a removed JDK.
 Use the repeatable build script from the repository root:
@@ -295,12 +316,12 @@ Missing SMTP configuration or a delivery failure does not undo publication.
 - Include `admin_web/` and `team_web/` in the deployed repository.
 - Configure public Firebase browser settings if required by key restrictions.
 
-GitHub source delivery and cloud deployment are separate steps. No Render
-deploy, Firebase rules/index deploy, real survey write or email send was
-performed as part of this work. One user-selected field-team account/profile was
-created and verified, and the separate team Android package was registered,
-in the existing Firebase project. Its private password
-setup instructions remain local in `.tool-state/`.
+GitHub source delivery and cloud deployment are separate steps. The Render
+service and Firebase rules/indexes were deployed on 28 October 2026. Deployment
+verification read the existing assigned survey without changing it or sending
+email. One user-selected field-team account/profile was created and verified,
+and the separate team Android package was registered in the existing Firebase
+project. Private account setup instructions remain local in `.tool-state/`.
 
 ## Verification
 
@@ -374,21 +395,18 @@ Verified locally on 27–28 October 2026:
 - Firebase credentials parse and their project matches the Android config.
 - Live Firebase reads passed: 7 farmer profiles, 1 admin, 1 team member.
 - A real Gemini chatbot response passed with the local configuration.
-- Render `/cities` is reachable; new admin/team interfaces are not deployed.
+- Render reports backend version `1.2.0`; admin/team pages return HTTP 200.
+- Live team sign-in and both assigned-visit lists return the existing approved task.
 - Backend setup check finds all three interfaces and both model types.
 
 Still unverified or blocked:
 
-- Team-visit indexes (both filtered and unfiltered) and farmer-support history
-  are missing in live Firestore. Their definitions are in `firestore.indexes.json`.
-- Cloud deployment, cloud Gemini settings and a complete live survey still
-  need verification. The APK uses the configured Render address by default.
-- Browser login screens rendered in the in-app preview, but configuration
-  fetches failed there. Native browser automation then stopped because it could
-  not establish the URL reliably. Live account sign-in and dashboard interaction
-  remain unverified; browser client tests do not replace those checks.
-- Restrictive Firestore rules and required indexes still need coordinated
-  deployment with the new backend and APK. Emulator checks are complete.
+- Cloud Gemini configuration is present. A reply from an existing farmer login
+  and a complete live survey still need verification by the operator. The
+  existing assigned survey was deliberately left approved for the field visit.
+- Browser login pages and their configuration load successfully. The default
+  fetch receiver issue was fixed and has a regression test. Interactive live
+  admin sign-in and dashboard actions still need operator verification.
 - Uno USB upload, LCD initialization and demo Serial values were verified.
   Automatic Arduino-to-app transfer and physical moisture calibration remain pending.
 
