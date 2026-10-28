@@ -27,6 +27,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /farms/{farmId} {
+      // The world is staff-only. Farmer apps receive their field names through /farm/fields.
+      allow read: if admin() || (hasRole('team') && resource.data.get('assignedTeamId', '') == request.auth.uid);
+      allow write: if false;
+    }
+    match /farm_assessments/{submissionId} {
+      allow read: if admin() || (hasRole('team') && resource.data.get('teamId', '') == request.auth.uid);
+      allow write: if false;
+    }
+
     match /survey_predictions/{surveyId} {
       // Draft recommendations must never be readable by farmers.
       allow read: if admin();

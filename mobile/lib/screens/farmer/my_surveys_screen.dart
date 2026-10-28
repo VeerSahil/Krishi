@@ -198,6 +198,13 @@ class MySurveysScreen extends StatelessWidget {
                           Text(tr(Survey.demoNotice, context: context),
                               style: TextStyle(color: Color(0xFF9C6428))),
                         if (s.isCompleted) ...[
+                          if (s.farmerReport != null)
+                            Text(
+                                s.farmerReport!['careLabel']?.toString() ??
+                                    'Approved care report',
+                                style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold)),
                           if (s.predictedRainfall != null)
                             Text(
                               tr('🌧 Rainfall: ${s.predictedRainfall!.toStringAsFixed(1)} mm',

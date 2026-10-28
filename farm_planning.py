@@ -66,14 +66,14 @@ def evidence_record(doc):
         ("visitStartedAt", "Visit started"), ("teamSubmittedAt", "Report received"),
         ("publishedAt", "Recommendation released"), ("rejectedAt", "Survey rejected")) if data.get(key)]
     timeline.sort(key=lambda event: str(event["at"]))
-    return {"surveyId": doc.id, "farmName": data.get("farmName", "Farm"),
+    return {"surveyId": doc.id, "farmId": data.get("farmId"), "farmerReport": data.get("farmerReport") if data.get("status") == "completed" else None, "farmName": data.get("farmName", "Farm"),
             "farmAddress": data.get("farmAddress"), "status": data.get("status"),
             "timeline": timeline, "evidence": data.get("fieldEvidence"),
             "legacyRecord": not bool(data.get("fieldEvidence")),
             "publishedBy": data.get("publishedBy"),
             "releasedCrop": (data.get("recommended_crop") or data.get("recommendedCrop")) if data.get("status") == "completed" else None,
             "cropPlan": data.get("cropPlan"), "planHistory": data.get("cropPlanHistory", []),
-            "planCheck": check_plan(data["cropPlan"], data) if data.get("cropPlan") else None}
+            "planCheck": check_plan(data["cropPlan"], data) if data.get("cropPlan") and not data.get("farmId") else None}
 
 
 def register_planning_routes(app, verify_farmer, get_db):
@@ -86,6 +86,8 @@ def register_planning_routes(app, verify_farmer, get_db):
         survey = doc.to_dict()
         if survey.get("userId") != user["uid"]:
             raise HTTPException(403, "Not your survey")
+        if survey.get("farmId"):
+            raise HTTPException(409, "This field uses reviewed care reports. Contact the team to discuss crop planning.")
         plan = request.model_dump(mode="json", exclude={"surveyId"})
         plan["updatedAt"] = datetime.now(timezone.utc)
         try:

@@ -15,6 +15,8 @@ from config import BASE_DIR, get_db
 from ml_pipeline import run_ml_pipeline
 from email_notifications import queue_survey_email, deliver_event
 from schemas import FieldReadingsRequest, temperature_metadata
+from farm_world import region_for_survey, queue_region_update
+from care_assessment import assess_care
 
 VISIT_STATES = ("approved", "in_progress")
 
@@ -26,17 +28,28 @@ def now():
 def apply_changes(snapshot, changes, db, background=None):
     ref = db.collection("farm_inputs").document(snapshot.id)
     try:
-        if background is None:
+        if background is None and not snapshot.to_dict().get("farmId"):
             ref.update(changes, option=db.write_option(last_update_time=snapshot.update_time))
             return
         batch = db.batch()
         batch.update(ref, changes, option=db.write_option(last_update_time=snapshot.update_time))
-        identifier = queue_survey_email(batch, db, snapshot.id, {**snapshot.to_dict(), **changes})
+        identifier = queue_survey_email(batch, db, snapshot.id, {**snapshot.to_dict(), **changes}) if background is not None else None
+        queue_region_update(batch, db, snapshot.id, snapshot.to_dict(), changes)
         batch.commit()
     except (FailedPrecondition, Conflict):
         raise HTTPException(409, "This survey changed. Refresh it before continuing.") from None
-    if identifier:
+    if identifier and background is not None:
         background.add_task(deliver_event, identifier, db)
+
+
+def same_submission(request, saved, fingerprint):
+    if saved.get("measurementFingerprint") == fingerprint:
+        return True
+    # Old offline payloads predate moistureUnit. Accept only an otherwise identical retry.
+    if request.moistureUnit == "unknown" and "moistureUnit" not in (saved.get("fieldEvidence") or {}):
+        legacy = request.model_dump(mode="json", exclude={"moistureUnit"})
+        return saved.get("measurementFingerprint") == sha256(json.dumps(legacy, sort_keys=True).encode()).hexdigest()
+    return False
 
 
 def assigned_visit(survey_id, user, db):
@@ -80,6 +93,17 @@ def admin_action(request, admin, db, background):
     prediction = draft.to_dict()
     if prediction.get("submissionId") != survey.get("measurementSubmissionId"):
         raise HTTPException(409, "The prediction does not match the latest team report")
+    if prediction.get("kind") == "care_assessment":
+        report = prediction.get("farmerReport")
+        if not report or report.get("submissionId") != survey.get("measurementSubmissionId"):
+            raise HTTPException(409, "Prepare and save the farmer-friendly report in the farm world before releasing it")
+        report = {**report, "issuedAt": now(), "approvedBy": admin["uid"]}
+        changes = {"status": "completed", "completedAt": now(), "publishedAt": now(), "publishedBy": admin["uid"],
+                   "farmerReport": report, "careClass": report["careClass"],
+                   "adminNotes": request.notes if request.notes is not None else survey.get("adminNotes"),
+                   **temperature_metadata(prediction.get("temperatureSource"), prediction.get("temperatureCategory"))}
+        apply_changes(snapshot, changes, db, background)
+        return {"status": "completed", "message": "Reviewed farm report released to the farmer", "careClass": report["careClass"]}
     changes = {
         "status": "completed", "predicted_rainfall_mm": prediction["predicted_rainfall_mm"],
         "predictedRainfall": prediction["predicted_rainfall_mm"],
@@ -137,22 +161,27 @@ def register_field_routes(app, verify_team, serialize_survey):
         survey = snapshot.to_dict()
         fingerprint = sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
         if request.clientSubmissionId and survey.get("measurementSubmissionId") == request.clientSubmissionId:
-            if survey.get("measurementFingerprint") != fingerprint:
+            if not same_submission(request, survey, fingerprint):
                 raise HTTPException(409, "This submission ID was already used with different readings.")
             return {"status": survey["status"], "surveyId": survey_id, "duplicate": True,
                     "message": "This report was already saved."}
         if survey.get("status") not in VISIT_STATES:
             raise HTTPException(409, "Readings can only be submitted for an approved field visit")
+        farm = region_for_survey(survey, db)
         try:
-            prediction = run_ml_pipeline(
-                survey["city"], survey["year"], survey["season"],
-                survey.get("soilType") or survey.get("soil_type"),
-                request.moisture, request.temperature, request.nitrogen,
-                request.phosphorus, request.potassium)
+            if farm is not None:
+                # The new care workflow deliberately does not use the old demo crop/rainfall datasets.
+                prediction = {"kind": "care_assessment", "careAssessment": assess_care(request.model_dump(), farm.to_dict()["policy"])}
+            else:
+                prediction = run_ml_pipeline(
+                    survey["city"], survey["year"], survey["season"],
+                    survey.get("soilType") or survey.get("soil_type"),
+                    request.moisture, request.temperature, request.nitrogen,
+                    request.phosphorus, request.potassium)
         except (ValueError, KeyError):
-            raise HTTPException(422, "Check the survey location and all five readings.") from None
+            raise HTTPException(422, "Check the field policy, location and all five readings.") from None
         except Exception:
-            raise HTTPException(503, "Prediction is unavailable. Your visit is still open; retry submission.") from None
+            raise HTTPException(503, "Assessment is unavailable. Your visit is still open; retry submission.") from None
         submission_id = request.clientSubmissionId or uuid4().hex
         metadata = request.temperature_metadata()
         prediction.update(metadata)
@@ -175,19 +204,23 @@ def register_field_routes(app, verify_team, serialize_survey):
         batch.update(db.collection("farm_inputs").document(survey_id), changes,
                      option=db.write_option(last_update_time=snapshot.update_time))
         batch.set(db.collection("survey_predictions").document(survey_id), draft)
+        assessment = prediction.get("careAssessment")
+        if assessment:
+            assessment = {**assessment, "submissionId": submission_id, "surveyId": survey_id}
+        queue_region_update(batch, db, survey_id, survey, changes, assessment=assessment)
         identifier = queue_survey_email(batch, db, survey_id, {**survey, **changes})
         try:
             batch.commit()
         except (FailedPrecondition, Conflict):
             saved = assigned_visit(survey_id, user, db).to_dict()
             if (request.clientSubmissionId and saved.get("measurementSubmissionId") == submission_id
-                    and saved.get("measurementFingerprint") == fingerprint):
+                    and same_submission(request, saved, fingerprint)):
                 return {"status": saved["status"], "surveyId": survey_id, "duplicate": True}
             raise HTTPException(409, "This visit changed. Refresh it before submitting again.") from None
         if identifier:
             background.add_task(deliver_event, identifier, db)
         return {"status": "awaiting_review", "surveyId": survey_id,
-                "message": "Readings saved. The recommendation is waiting for admin release."}
+                "message": "Readings saved. The field report is waiting for admin review."}
 
     @router.get("")
     def home():

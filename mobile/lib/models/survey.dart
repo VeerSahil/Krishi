@@ -13,6 +13,8 @@ enum SurveyStatus {
 
 class Survey {
   final String id;
+  final String? farmId;
+  final Map<String, dynamic>? farmerReport;
   final String farmerId;
   final String farmerName;
   final String farmerEmail;
@@ -43,6 +45,8 @@ class Survey {
 
   Survey({
     required this.id,
+    this.farmId,
+    this.farmerReport,
     required this.farmerId,
     required this.farmerName,
     required this.farmerEmail,
@@ -102,6 +106,10 @@ class Survey {
   factory Survey.fromData(String id, Map<String, dynamic> data) {
     return Survey(
       id: id,
+      farmId: data['farmId'] as String?,
+      farmerReport: data['farmerReport'] is Map
+          ? Map<String, dynamic>.from(data['farmerReport'])
+          : null,
       // backend uses 'userId' not 'farmerId'
       farmerId: data['farmerId'] ?? data['userId'] ?? '',
       farmerName: data['farmerName'] ?? '',

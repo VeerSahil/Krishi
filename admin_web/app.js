@@ -446,8 +446,17 @@ async function openSurvey(id) {
         + (prediction.recommendationNotice ? '\n' + prediction.recommendationNotice : '');
       $('#survey-result').hidden = false;
     }
+    if (prediction?.kind === 'care_assessment' || data.farmerReport) {
+      const grade = prediction?.careAssessment?.grade || data.farmerReport?.careClass || 'U';
+      $('#survey-result').replaceChildren(node('p', 'Care class ' + grade + (data.status === 'awaiting_review'
+        ? ' - draft awaiting admin report review.' : ' - approved report released to farmer.')));
+      const world = node('a', 'Open this field in the 3D Field Atlas');
+      world.href = '/world/?field=' + encodeURIComponent(data.farmId);
+      $('#survey-result').append(world); $('#survey-result').hidden = false;
+    }
     const canApprove = data.status === 'pending';
-    const canPublish = data.status === 'awaiting_review' && !!data.draftPrediction;
+    const canPublish = data.status === 'awaiting_review' && !!data.draftPrediction &&
+      (data.draftPrediction.kind !== 'care_assessment' || !!data.draftPrediction.farmerReport);
     const canReject = ['pending', 'approved', 'in_progress', 'awaiting_review', 'failed'].includes(data.status);
     $('#assignment-fields').hidden = !canApprove;
     $('#team-assignee').disabled = !canApprove;
@@ -486,7 +495,7 @@ async function processSurvey(action) {
     const result = await api.request('/admin/process-survey', { method: 'POST', body });
     if (!state.authenticated) return;
     $('#survey-dialog').close();
-    showToast(action === 'publish' ? 'Result released to farmer: ' + result.crop
+    showToast(action === 'publish' ? 'Report released to farmer.' + (result.crop ? ' Crop: ' + result.crop : '')
       : action === 'approve' ? 'Visit approved and assigned to the field team.' : 'Survey rejected.');
     await refreshDashboard();
   } catch (error) {

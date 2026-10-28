@@ -38,6 +38,7 @@ class _TeamVisitScreenState extends State<TeamVisitScreen> {
   String _nutrientUnit = 'unknown';
   String _nutrientSource = 'manual';
   String _moistureSource = 'manual';
+  String _moistureUnit = 'relative_percent';
   String? _capturedAt;
   String? _draftMessage;
   FieldVisit? _visit;
@@ -107,6 +108,7 @@ class _TeamVisitScreenState extends State<TeamVisitScreen> {
           _nutrientUnit = draft['nutrientUnit'] ?? 'unknown';
           _nutrientSource = draft['nutrientSource'] ?? 'manual';
           _moistureSource = draft['moistureSource'] ?? 'manual';
+          _moistureUnit = draft['moistureUnit'] ?? 'relative_percent';
           _soilReference.text = draft['soilTestReference'] ?? '';
           _attachment.text = draft['soilTestAttachmentUrl'] ?? '';
           _capturedAt = draft['capturedAt'];
@@ -153,6 +155,7 @@ class _TeamVisitScreenState extends State<TeamVisitScreen> {
       'nutrientUnit': _nutrientUnit,
       'nutrientSource': _nutrientSource,
       'moistureSource': _moistureSource,
+      'moistureUnit': _moistureUnit,
       'soilTestReference': _soilReference.text.trim().isEmpty
           ? null
           : _soilReference.text.trim(),
@@ -188,6 +191,7 @@ class _TeamVisitScreenState extends State<TeamVisitScreen> {
         'nutrientUnit': _nutrientUnit,
         'nutrientSource': _nutrientSource,
         'moistureSource': _moistureSource,
+        'moistureUnit': _moistureUnit,
         'soilTestReference': _soilReference.text,
       });
       if (mounted)
@@ -317,6 +321,15 @@ class _TeamVisitScreenState extends State<TeamVisitScreen> {
                               initiallyExpanded: false,
                               maintainState: true,
                               children: [
+                                _choice(
+                                    'Moisture basis',
+                                    _moistureUnit,
+                                    [
+                                      'relative_percent',
+                                      'vwc_percent',
+                                      'unknown'
+                                    ],
+                                    (v) => _moistureUnit = v),
                                 _choice(
                                     'Moisture source',
                                     _moistureSource,

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import '../../services/app_language.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -199,12 +200,27 @@ class _TeamHomeScreenState extends State<TeamHomeScreen>
               ),
           ])));
 
+  Future<void> _copyWorldLink() async {
+    final url =
+        BackendClient.defaultBaseUrl.replaceAll(RegExp(r'/+$'), '') + '/world/';
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr(
+            'Staff world link copied. Open it in your browser and sign in as an inspector.',
+            context: context))));
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: Color(0xFFF6F7F1),
         appBar: AppBar(
           title: Text(tr('Krishi Team', context: context)),
           actions: [
+            IconButton(
+                tooltip: tr('Copy staff world link', context: context),
+                onPressed: _copyWorldLink,
+                icon: const Icon(Icons.public)),
             IconButton(
                 tooltip: tr('Refresh visits', context: context),
                 onPressed: _loading ? null : _load,

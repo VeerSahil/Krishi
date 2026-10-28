@@ -129,7 +129,7 @@ class _HomeTab extends StatelessWidget {
                         color: Color(0xFFC0D59B), size: 34),
                     SizedBox(height: 16),
                     Text(
-                        tr('Know your farm.\nPlan your crop.',
+                        tr('Know your field. Follow its care.',
                             context: context),
                         style: TextStyle(
                             fontSize: 27,
@@ -138,7 +138,7 @@ class _HomeTab extends StatelessWidget {
                             color: Colors.white)),
                     SizedBox(height: 12),
                     Text(
-                        tr('Request a survey and get a crop recommendation for your farm.',
+                        tr('Request a survey and receive a clear field-care report.',
                             context: context),
                         style: TextStyle(
                             color: Color(0xFFBBCDBB),
@@ -170,9 +170,8 @@ class _HomeTab extends StatelessWidget {
             SizedBox(height: 12),
             _ActionCard(
                 icon: Icons.fact_check_outlined,
-                title: 'Crop plan & farm evidence',
-                subtitle:
-                    'Check your chosen crop and view dated survey records',
+                title: 'Farm evidence & reports',
+                subtitle: 'View dated readings and reviewed field-care reports',
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => FarmEvidenceScreen()))),
             SizedBox(height: 10),

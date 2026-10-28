@@ -23,7 +23,7 @@ STATUS_COPY = {
     "pending": ("Request received - awaiting approval", "Your survey request has been received and is waiting for admin approval. No farm visit is confirmed yet."),
     "approved": ("Farm visit approved", "Your survey request has been approved and assigned to our field team. The team will contact you to coordinate the visit; a visit time is not yet confirmed."),
     "in_progress": ("Farm visit started", "Your assigned team member has marked the farm visit as started."),
-    "awaiting_review": ("Field report received - under review", "The field team has submitted your readings. The admin is reviewing the report. A crop recommendation has not been released yet."),
+    "awaiting_review": ("Field report received - under review", "The field team has submitted your readings. The admin is reviewing the report. The approved farmer report has not been released yet."),
     "completed": ("Your survey results are ready", "The admin has reviewed and released your survey result. Open Krishi Farmer to see your report and contact the admin if you have questions."),
     "rejected": ("Survey request declined", "The admin has declined or cancelled this survey request. Please use Help in Krishi Farmer if you need clarification."),
 }
@@ -70,7 +70,12 @@ def queue_survey_email(batch, db, survey_id, survey):
     lines = ["Hello " + str(survey.get("farmerName") or "Farmer") + ",", "", explanation, "",
              "Farm: " + str(survey.get("farmName") or "Your farm"), "Survey ID: " + survey_id,
              "Location: " + str(survey.get("city") or "Not specified")]
-    if status == "completed":
+    if status == "completed" and survey.get("farmerReport"):
+        report = survey["farmerReport"]
+        title = "Your reviewed farm report is ready"
+        lines += ["", str(report.get("title", "Farm visit report")), str(report.get("summary", "")),
+                  *[str(step) for step in report.get("actions", [])], *[str(note) for note in report.get("notices", [])]]
+    elif status == "completed":
         lines += ["", "Recommended crop: " + str(survey.get("recommended_crop") or survey.get("recommendedCrop") or "See your report"),
                   "Estimated rainfall: " + str(survey.get("predicted_rainfall_mm", "See your report")) + " mm"]
         if survey.get("recommendationNotice"):

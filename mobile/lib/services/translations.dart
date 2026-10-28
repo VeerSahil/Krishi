@@ -1,5 +1,60 @@
 // English keys; Hindi and Marathi translations. No network translation service.
 const translations = <String, List<String>>{
+  "Your registered field": ["आपका पंजीकृत खेत", "तुमचे नोंदणीकृत शेत"],
+  "Choose your field": ["अपना खेत चुनें", "तुमचे शेत निवडा"],
+  "Registered fields could not be loaded. You can still request a visit; admin will link the field.":
+      [
+    "पंजीकृत खेत नहीं खुले। आप भेंट का अनुरोध कर सकते हैं; प्रशासक खेत जोड़ेंगे।",
+    "नोंदणीकृत शेते उघडली नाहीत. तुम्ही भेटीची विनंती करू शकता; प्रशासक शेत जोडेल."
+  ],
+  "Your farm visit report": [
+    "आपके खेत की निरीक्षण रिपोर्ट",
+    "तुमच्या शेतभेटीचा अहवाल"
+  ],
+  "Care class": ["देखभाल श्रेणी", "देखभाल श्रेणी"],
+  "Your next steps": ["आपके अगले कदम", "तुमची पुढील पावले"],
+  "Readings from this visit": ["इस भेंट की रीडिंग", "या भेटीतील मोजमाप"],
+  "Volumetric moisture": ["आयतन आधारित नमी", "घनफळावर आधारित ओलावा"],
+  "Relative / declared moisture": [
+    "सापेक्ष / दर्ज नमी",
+    "सापेक्ष / नोंदवलेला ओलावा"
+  ],
+  "Nutrient units were not specified.": [
+    "पोषक तत्वों की इकाई दर्ज नहीं है।",
+    "पोषकद्रव्यांची एकके नोंदवलेली नाहीत."
+  ],
+  "The team report has arrived. Admin is reviewing your field report.": [
+    "टीम की रिपोर्ट मिल गई। प्रशासक खेत की रिपोर्ट जांच रहे हैं।",
+    "पथकाचा अहवाल मिळाला. प्रशासक शेताचा अहवाल तपासत आहे."
+  ],
+  "Moisture basis": ["नमी के माप का आधार", "ओलावा मोजण्याचा आधार"],
+  "relative_percent": ["सापेक्ष नमी %", "सापेक्ष ओलावा %"],
+  "vwc_percent": ["आयतन आधारित नमी %", "घनफळावर आधारित ओलावा %"],
+  "Copy staff world link": [
+    "स्टाफ वर्ल्ड लिंक कॉपी करें",
+    "पथकाच्या विश्वाचा दुवा कॉपी करा"
+  ],
+  "Staff world link copied. Open it in your browser and sign in as an inspector.":
+      [
+    "लिंक कॉपी हुआ। ब्राउज़र में खोलकर निरीक्षक खाते से साइन इन करें।",
+    "दुवा कॉपी केला. ब्राउझरमध्ये उघडून निरीक्षक खात्याने साइन इन करा."
+  ],
+  "Know your field. Follow its care.": [
+    "अपना खेत जानें। उसकी देखभाल पर नजर रखें।",
+    "आपले शेत जाणून घ्या. त्याच्या देखभालीकडे लक्ष द्या."
+  ],
+  "Request a survey and receive a clear field-care report.": [
+    "सर्वेक्षण मांगें और खेत की देखभाल की सरल रिपोर्ट पाएं।",
+    "सर्वेक्षणाची विनंती करा व शेताच्या देखभालीचा सोपा अहवाल मिळवा."
+  ],
+  "Farm evidence & reports": [
+    "खेत के रिकॉर्ड और रिपोर्ट",
+    "शेताच्या नोंदी व अहवाल"
+  ],
+  "View dated readings and reviewed field-care reports": [
+    "दिनांकित रीडिंग और समीक्षा की गई रिपोर्ट देखें",
+    "दिनांकवार मोजमाप व तपासलेले अहवाल पहा"
+  ],
   "Optional report details": [
     "रिपोर्ट का अतिरिक्त विवरण (वैकल्पिक)",
     "अहवालाचा अतिरिक्त तपशील (ऐच्छिक)"

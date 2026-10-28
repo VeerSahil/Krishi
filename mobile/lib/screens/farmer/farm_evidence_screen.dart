@@ -1,3 +1,4 @@
+import '../../widgets/farmer_report_card.dart';
 import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -180,7 +181,7 @@ class _FarmEvidenceScreenState extends State<FarmEvidenceScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title: Text(tr('Farm evidence & crop plans', context: context)),
+            title: Text(tr('Farm evidence & reports', context: context)),
             actions: [
               IconButton(
                   onPressed: busy ? null : () => load(),
@@ -252,7 +253,8 @@ class _FarmEvidenceScreenState extends State<FarmEvidenceScreen> {
                                 r['releasedCrop']),
                           if (r['publishedBy'] != null)
                             item('Reviewed and released by', r['publishedBy']),
-                          if (r['cropPlan'] != null) ...[
+                          if (r['cropPlan'] != null &&
+                              r['planCheck'] != null) ...[
                             item('Crop you want to grow',
                                 r['cropPlan']['proposedCrop']),
                             item('Planned sowing date',
@@ -283,11 +285,16 @@ class _FarmEvidenceScreenState extends State<FarmEvidenceScreen> {
                                 in r['planCheck']['limits'] as List)
                               Text(tr(limit, context: context)),
                           ],
-                          OutlinedButton.icon(
-                              onPressed: busy ? null : () => edit(r),
-                              icon: Icon(Icons.fact_check_outlined),
-                              label: Text(
-                                  tr('Check my crop plan', context: context))),
+                          if (r['farmerReport'] != null)
+                            FarmerReportCard(
+                                report: Map<String, dynamic>.from(
+                                    r['farmerReport'])),
+                          if (r['farmId'] == null)
+                            OutlinedButton.icon(
+                                onPressed: busy ? null : () => edit(r),
+                                icon: Icon(Icons.fact_check_outlined),
+                                label: Text(tr('Check my crop plan',
+                                    context: context))),
                         ]))),
           if (next != null)
             TextButton(

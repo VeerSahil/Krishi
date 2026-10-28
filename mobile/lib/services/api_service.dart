@@ -29,8 +29,10 @@ class ApiService {
     required String farmName,
     required String farmAddress,
     String? contactPhone,
+    String? farmId,
   }) async {
     final data = await _backend.post('/survey/book', {
+      if (farmId != null) 'farmId': farmId,
       'farmName': farmName,
       'farmAddress': farmAddress,
       'contactPhone': contactPhone,
@@ -46,6 +48,13 @@ class ApiService {
       throw const ApiException('The server did not return a survey ID.');
     }
     return id;
+  }
+
+  Future<List<Map<String, dynamic>>> registeredFields() async {
+    final result = await _backend.get('/farm/fields');
+    return (result['fields'] as List)
+        .map((value) => Map<String, dynamic>.from(value))
+        .toList();
   }
 
   Future<void> updateSurveyMeasurements(

@@ -69,6 +69,7 @@ class CropPlanRequest(RequestModel):
 
 
 class BookSurveyRequest(RequestModel):
+    farmId: str | None = Field(default=None, min_length=1, max_length=200, pattern=r"^[^/]+$")
     farmName: str = Field(default="My farm", min_length=1, max_length=100)
     farmAddress: str = Field(min_length=8, max_length=500)
     contactPhone: str | None = Field(default=None, min_length=7, max_length=25, pattern=r"^[+0-9() -]+$")
@@ -116,6 +117,7 @@ class FieldReadingsRequest(TemperatureInput):
     soilTestReference: str | None = Field(default=None, max_length=200)
     soilTestAttachmentUrl: str | None = Field(default=None, max_length=1500)
     moistureSource: Literal["manual", "sensor"] = "manual"
+    moistureUnit: Literal["relative_percent", "vwc_percent", "unknown"] = "unknown"
 
     @model_validator(mode="after")
     def validate_evidence(self):

@@ -28,6 +28,8 @@ before(async () => {
       userId: 'farmer', assignedTeamId: 'team', status: 'awaiting_review', moisture: 45,
     });
     await setDoc(doc(db, 'survey_predictions', 'visit'), { recommended_crop: 'Wheat' });
+    await setDoc(doc(db, 'farms', 'plot-00001'), { farmerId: 'farmer', assignedTeamId: 'team', assessment: { grade: 'C' } });
+    await setDoc(doc(db, 'farm_assessments', 'report'), { farmerId: 'farmer', teamId: 'team', grade: 'C' });
     await setDoc(doc(db, 'support_threads', 'help'), { userId: 'farmer', message: 'Visit question' });
     await setDoc(doc(db, 'reviews', 'review'), { rating: 5 });
   });
@@ -104,4 +106,24 @@ test('even admin clients must use backend APIs to write workflow records', async
   }
   await assertSucceeds(getDoc(doc(firestore('farmer'), 'reviews', 'review')));
   await assertFails(getDoc(doc(firestore('admin'), 'unknown_collection', 'record')));
+});
+
+
+test('staff world and assessment history are private to admin and assigned inspectors', async () => {
+  for (const [name, id] of [['farms', 'plot-00001'], ['farm_assessments', 'report']]) {
+    await assertSucceeds(getDoc(doc(firestore('admin'), name, id)));
+    await assertSucceeds(getDoc(doc(firestore('team'), name, id)));
+    for (const uid of ['farmer', 'other', 'team-other']) {
+      await assertFails(getDoc(doc(firestore(uid), name, id)));
+      await assertFails(setDoc(doc(firestore(uid), name, id), { grade: 'A' }));
+    }
+    await assertFails(updateDoc(doc(firestore('admin'), name, id), { grade: 'A' }));
+    await assertFails(updateDoc(doc(firestore('team'), name, id), { grade: 'A' }));
+  }
+});
+
+test('team world queries must constrain assignment', async () => {
+  await assertSucceeds(getDocs(query(collection(firestore('team'), 'farms'), where('assignedTeamId', '==', 'team'))));
+  await assertFails(getDocs(collection(firestore('team'), 'farms')));
+  await assertFails(getDocs(query(collection(firestore('farmer'), 'farms'), where('farmerId', '==', 'farmer'))));
 });

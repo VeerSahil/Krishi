@@ -5,7 +5,51 @@ Android apps in `mobile/`, and admin and field-team browser interfaces.
 All interfaces use the same Firebase project. Automatic Arduino-to-app transfer is deferred;
 the team enters the gadget readings manually for now.
 
-## Live deployment
+## New direction: staff 3D Field Atlas (1.4)
+
+The previous implementation is preserved in commit
+`95db21b2150e640ac106a2a9500ef745d41d560b` on
+`codex/farmer-team-arduino-flow`. The new care-workflow implementation belongs to
+`codex/3d-farm-world`. This branch has **not** been deployed to Render or Firebase,
+and the phone apps must be rebuilt to show the new field picker and reports.
+
+Start the usual backend (`build.bat`) and open `http://127.0.0.1:8000/world/`.
+Use **Explore a sample world** or `/world/?demo=1` for fictional preview data.
+Sign in as admin or an assigned inspector for real records. Farmers use their
+phone app; they have no access to staff world data. The 3D world uses native
+WebGL and original reusable potato, wheat, maize, rice, cotton and vegetable
+meshes; no external 3D engine, asset download or Node build is needed.
+
+1. A farmer registers as before. Admin selects that farmer in **Add field**,
+   adds the field name/address and crop asset, and assigns a numbered region.
+2. The farmer selects that registered field when booking a survey on the phone.
+   Admin can attach an older **pending, unlinked** request to a field in the world.
+3. Admin selects its region, approves the request and assigns an inspector.
+4. The inspector visits the real farm and uses the **same Krishi Team mobile
+   form** to enter moisture %, temperature in Celsius and manual N/P/K. Optional
+   evidence details record measurement basis, nutrient units and sources.
+5. Submission atomically saves readings, an immutable care assessment and the
+   farm class. Staff see the change through authenticated Firestore/SSE updates,
+   with polling fallback. Crop colour/height animate between care classes.
+6. Admin prepares a simple English, Hindi or Marathi report, edits its explanation
+   and next steps, and releases it. Only then can the farmer see that report.
+   Existing configured email delivery includes the approved farmer copy.
+
+Care classes are transparent follow-up priorities: **A** = zero readings outside
+selected bands, **B** = one, **C** = two or more, **U** = evidence/units require
+verification. They use moisture, temperature, N and K. P remains in the visit
+record. Default bands are **demonstration examples**, not scientifically trained
+health labels. Configured policies require a reference and matching units; no
+nutrient or moisture-unit conversion is guessed. Simulated temperatures retain
+an explicit warning in the staff view and farmer report.
+
+Linked farm visits **do not call the previous crop/rainfall demo models**.
+Those models remain available for legacy unlinked requests. The world is an
+illustrative layout, not a GPS map or a real-time sensor/plant-health simulation.
+See [the architecture and rollout notes](docs/FIELD_ATLAS.md) for limitations,
+API contracts, validation and deployment steps.
+
+## Previously verified deployment
 
 The three-role backend was deployed on 28 October 2026 to the existing Render
 **Free** service at https://krishi-backend-ox3u.onrender.com . Render deploys
@@ -42,7 +86,7 @@ accounts cannot enter its workspace. Team accounts signing into the farmer
 APK see instructions to install Krishi Team and an optional team website link;
 admin accounts see their web dashboard address.
 
-## Survey lifecycle
+## Legacy unlinked survey lifecycle
 
 1. Farmer signs in with Firebase Authentication and books a survey. The form
    includes farm name, visit address, optional contact phone, supported city,
@@ -53,8 +97,8 @@ admin accounts see their web dashboard address.
 3. The assigned team member can start the visit:
    `approved -> in_progress`. Other team members cannot access that job.
 4. The team enters moisture (%), temperature (degrees C), and manually supplied
-   nitrogen, phosphorus and potassium values. N/P/K must use the same units as
-   the training dataset; the current CSV does not document those units.
+   nitrogen, phosphorus and potassium values. N/P/K dataset units are undocumented; legacy outputs must be treated as
+   demonstrations and must not guide real fertiliser use.
    Submission is allowed from `approved` or `in_progress`.
 5. The backend estimates rainfall from historical data and classifies a crop
    using rainfall plus all five submitted values. It atomically saves the

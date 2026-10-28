@@ -36,7 +36,7 @@ class FarmMonitoringScreen extends StatelessWidget {
             return Center(child: CircularProgressIndicator());
           final groups = <String, List<Survey>>{};
           for (final survey in snapshot.data!) {
-            final key =
+            final key = survey.farmId ??
                 '${survey.farmName}|${survey.farmAddress.isEmpty ? survey.city : survey.farmAddress}'
                     .toLowerCase();
             groups.putIfAbsent(key, () => []).add(survey);
@@ -142,9 +142,7 @@ class FarmMonitoringScreen extends StatelessWidget {
                             Text(tr(Survey.demoNotice, context: context),
                                 style: TextStyle(color: Color(0xFF9C6428))),
                           Divider(height: 30),
-                          Text(
-                              tr('LAST RELEASED RECOMMENDATION',
-                                  context: context),
+                          Text(tr('LAST APPROVED REPORT', context: context),
                               style: TextStyle(
                                   fontSize: 9,
                                   letterSpacing: 1.2,

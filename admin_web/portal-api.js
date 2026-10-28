@@ -78,13 +78,13 @@ export class AdminApi {
     };
     try {
       // The server verifies the token and users/{uid}.role before returning data.
-      const overview = await this.request(this.role === 'team' ? '/team/overview' : '/admin/overview');
+      const overview = await this.request(this.role === 'staff' ? '/world/session' : this.role === 'team' ? '/team/overview' : '/admin/overview');
       if (epoch !== this.epoch || !this.session) throw new PortalError('Sign-in was cancelled.', 401);
       return overview;
     } catch (error) {
       if (epoch === this.epoch) this.signOut();
       if (error.status === 403) {
-        throw new PortalError(this.role === 'team'
+        throw new PortalError(this.role === 'staff' ? 'The farm world is for administrators and assigned inspectors. Farmers use Krishi Farmer.' : this.role === 'team'
           ? 'This account does not have field-team access. Ask your administrator for the correct account.'
           : 'This account does not have administrator access. Farmers use the phone app; field staff use the team workspace.', 403);
       }

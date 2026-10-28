@@ -22,9 +22,10 @@ from ml_pipeline import (CITY_MAP, SEASON_MAP, TEMP_CATEGORY_MAP, get_soil_nutri
 from schemas import (AdminActionRequest, BookSurveyRequest, ChatRequest, FarmRequest,
                      ReviewRequest, temperature_metadata)
 from field_workflow import admin_action, apply_changes
+from farm_world import queue_region_update
 
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Agro AI Backend", version="1.3.0")
+app = FastAPI(title="Agro AI Backend", version="1.4.0")
 origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "*").split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins,
                    allow_credentials="*" not in origins,
@@ -88,6 +89,14 @@ def verify_team(user=Depends(get_current_user), db=Depends(get_db)):
 
 def verify_farmer(user=Depends(get_current_user), db=Depends(get_db)):
     return require_role(user, db, "farmer")
+
+
+def verify_staff(user=Depends(get_current_user), db=Depends(get_db)):
+    profile = db.collection("users").document(user["uid"]).get()
+    data = profile.to_dict() if profile.exists else {}
+    if data.get("role") not in ("admin", "team"):
+        raise HTTPException(403, "The farm world is for administrators and assigned inspectors only")
+    return {**user, "role": data["role"], "name": data.get("name") or "Field staff"}
 
 
 def serialize_survey(snapshot):
@@ -174,11 +183,21 @@ def book_survey(request: BookSurveyRequest, background: BackgroundTasks, user=De
         **temperature_metadata(None),
         "emailSent": False, "emailStatus": "not_sent",
     }
+    if request.farmId:
+        farm_doc = db.collection("farms").document(request.farmId).get()
+        if not farm_doc.exists or farm_doc.to_dict().get("farmerId") != user["uid"]:
+            raise HTTPException(403, "Choose a field registered to your account")
+        farm = farm_doc.to_dict()
+        data.update({"farmId": farm_doc.id, "farmName": farm["farmName"], "farmAddress": farm["farmAddress"],
+                     "city": farm["city"], "soilType": farm["soilType"], "soil_type": farm["soilType"]})
     ref = db.collection("farm_inputs").document()
     batch = db.batch()
     batch.set(ref, data)
     identifier = queue_survey_email(batch, db, ref.id, data)
-    batch.commit()
+    queue_region_update(batch, db, ref.id, data, {"status": "pending"})
+    try: batch.commit()
+    except (FailedPrecondition, Conflict):
+        raise HTTPException(409, "This field changed or has another open visit. Refresh first.") from None
     if identifier:
         background.add_task(deliver_event, identifier, db)
     return {"surveyId": ref.id, "status": "pending",
@@ -251,6 +270,9 @@ def recent_chat_context(db, uid):
     for doc in query.stream(timeout=3, retry=None):
         data = doc.to_dict()
         crop = data.get("recommended_crop") or data.get("recommendedCrop")
+        if data.get("farmerReport"):
+            report = data["farmerReport"]
+            lines.append(str(data.get("farmName", "Farm")) + ": " + str(report.get("summary", "")) + " " + " ".join(report.get("notices", [])))
         if crop:
             label = " [DEMO: simulated temperature]" if data.get("temperatureSource") == "simulated" else ""
             lines.append(f"- {crop} in {data.get('city', '')}{label}")
@@ -320,3 +342,6 @@ register_admin_routes(app, verify_admin, serialize_survey)
 
 from farm_planning import register_planning_routes
 register_planning_routes(app, verify_farmer, get_db)
+
+from farm_world import register_world_routes
+register_world_routes(app, verify_staff, verify_admin, verify_farmer, serialize_survey)

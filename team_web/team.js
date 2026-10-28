@@ -97,6 +97,7 @@ async function openVisit(id) {
     $('#temperature-category').value = data.temperatureCategory || 'moderate';
     $('#temperature-demo').disabled = $('#temperature-category').disabled = $('#generate-temperature').disabled = !editable;
     syncDemoControls();
+    for (const [id,key,fallback] of [['moisture-basis','moistureUnit','relative_percent'],['nutrient-unit','nutrientUnit','unknown'],['nutrient-source','nutrientSource','manual'],['soil-test-reference','soilTestReference','']]) { $('#' + id).value = data[key] ?? fallback; $('#' + id).disabled = !editable; }
     if (data.temperatureSource === 'simulated') detail('Temperature source', DEMO_NOTICE);
     $('#reading-fields').hidden = $('#submit-readings').hidden = !editable;
     $('#start-visit').hidden = data.status !== 'approved';
@@ -110,7 +111,7 @@ async function openVisit(id) {
       }
     }
     $('#visit-state').textContent = data.status === 'awaiting_review'
-      ? 'Your report has been submitted. The admin will review and release the recommendation.'
+      ? 'Your report has been submitted. The admin will review and release the field report.'
       : data.status === 'completed'
         ? 'Released crop recommendation: ' + (data.recommended_crop || data.recommendedCrop || '—')
         : data.status === 'rejected' ? 'This visit has been cancelled or rejected. Do not submit readings.'
@@ -151,7 +152,7 @@ $('#start-visit').addEventListener('click', async () => {
 $('#readings-form').addEventListener('submit', async event => {
   event.preventDefault();
   if (!$('#readings-form').reportValidity() || !state.active) return;
-  const body = { notes: $('#notes').value.trim() || null };
+  const body = { notes: $('#notes').value.trim() || null, moistureUnit: $('#moisture-basis').value, nutrientUnit: $('#nutrient-unit').value, nutrientSource: $('#nutrient-source').value, soilTestReference: $('#soil-test-reference').value.trim() || null };
   for (const field of ['moisture', 'temperature', 'nitrogen', 'phosphorus', 'potassium']) body[field] = Number($('#' + field).value);
   if ($('#temperature-demo').checked) {
     body.temperatureSource = 'simulated';

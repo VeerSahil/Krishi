@@ -1,3 +1,4 @@
+import '../../widgets/farmer_report_card.dart';
 import '../../services/app_language.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -147,10 +148,12 @@ class SurveyDetailScreen extends StatelessWidget {
               Padding(
                   padding: EdgeInsets.only(bottom: 20),
                   child: Text(
-                      tr('The team report has arrived. Admin is reviewing your crop recommendation.',
+                      tr('The team report has arrived. Admin is reviewing your field report.',
                           context: context),
                       style: TextStyle(color: Color(0xFF9C7B38), height: 1.6))),
-            if (s.isCompleted)
+            if (s.isCompleted && s.farmerReport != null)
+              FarmerReportCard(report: s.farmerReport!),
+            if (s.isCompleted && s.farmerReport == null)
               section(context, 'Your released recommendation', [
                 Text(tr(s.recommendedCrop ?? '—', context: context),
                     style: TextStyle(fontSize: 29, color: Color(0xFF235B44))),

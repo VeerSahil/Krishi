@@ -17,6 +17,44 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
   final _phone = TextEditingController();
   String _city = 'Pune', _soilType = 'Black', _season = 'Monsoon';
   bool _loading = false;
+  bool _fieldsLoading = true;
+  String? _fieldsError;
+  String? _farmId;
+  List<Map<String, dynamic>> _fields = [];
+  @override
+  void initState() {
+    super.initState();
+    _loadFields();
+  }
+
+  Future<void> _loadFields() async {
+    try {
+      final fields = await ApiService().registeredFields();
+      if (!mounted) return;
+      setState(() {
+        _fields = fields;
+        _fieldsError = null;
+      });
+      if (fields.length == 1) _selectField(fields.single['id'] as String);
+    } catch (_) {
+      if (mounted)
+        setState(() => _fieldsError =
+            'Registered fields could not be loaded. You can still request a visit; admin will link the field.');
+    } finally {
+      if (mounted) setState(() => _fieldsLoading = false);
+    }
+  }
+
+  void _selectField(String id) {
+    final field = _fields.firstWhere((f) => f['id'] == id);
+    setState(() {
+      _farmId = id;
+      _farmName.text = field['farmName'];
+      _address.text = field['farmAddress'];
+      _city = field['city'];
+      _soilType = field['soilType'];
+    });
+  }
 
   @override
   void dispose() {
@@ -32,6 +70,7 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
     try {
       final profile = await AuthService().getUserData();
       await ApiService().bookSurvey(
+        farmId: _farmId,
         city: _city,
         soilType: _soilType,
         season: _season,
@@ -67,7 +106,8 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
           .map((item) => DropdownMenuItem(
               value: item, child: Text(tr(item, context: context))))
           .toList(),
-      onChanged: _loading ? null : changed,
+      onChanged:
+          _loading || (_farmId != null && label != 'Season') ? null : changed,
     );
   }
 
@@ -94,8 +134,32 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
                           context: context),
                       style: TextStyle(color: Colors.grey, height: 1.6)),
                   SizedBox(height: 24),
+                  if (_fieldsLoading) const LinearProgressIndicator(),
+                  if (_fieldsError != null)
+                    Text(tr(_fieldsError!, context: context)),
+                  if (_fields.isNotEmpty) ...[
+                    DropdownButtonFormField<String>(
+                      value: _farmId,
+                      decoration: InputDecoration(
+                          labelText:
+                              tr('Your registered field', context: context),
+                          border: const OutlineInputBorder()),
+                      items: _fields
+                          .map((field) => DropdownMenuItem<String>(
+                              value: field['id'],
+                              child: Text(field['farmName'])))
+                          .toList(),
+                      onChanged:
+                          _loading ? null : (value) => _selectField(value!),
+                      validator: (value) => value == null
+                          ? tr('Choose your field', context: context)
+                          : null,
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   TextFormField(
                       controller: _farmName,
+                      enabled: !_loading && _farmId == null,
                       maxLength: 100,
                       decoration: InputDecoration(
                           labelText: tr('Farm name', context: context),
@@ -107,6 +171,7 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
                   SizedBox(height: 12),
                   TextFormField(
                       controller: _address,
+                      enabled: !_loading && _farmId == null,
                       minLines: 2,
                       maxLines: 4,
                       maxLength: 500,
