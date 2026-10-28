@@ -13,6 +13,7 @@ import chatbot
 import config
 import main
 import field_workflow
+import email_notifications
 from ml_pipeline import (get_soil_nutrients, load_crop_data, predict_rainfall,
                          recommend_crop, run_ml_pipeline)
 
@@ -100,11 +101,12 @@ def test_demo_email_preserves_temperature_provenance(api, monkeypatch):
         def send_message(self, message): sent.append(message)
     monkeypatch.setenv("SMTP_EMAIL", "test@example.invalid")
     monkeypatch.setenv("SMTP_PASSWORD", "test-only")
-    monkeypatch.setattr(main.smtplib, "SMTP", SMTP)
-    main.send_prediction_email("farmer@example.invalid", "Farmer", "Wheat", 100,
-                               survey_id, db, DEMO_TEMPERATURE_NOTICE)
-    assert "Demo" in sent[0]["Subject"]
-    assert DEMO_TEMPERATURE_NOTICE in sent[0].get_payload(decode=True).decode("utf-8")
+    monkeypatch.setattr(email_notifications.smtplib, "SMTP", SMTP)
+    assert approve(client, survey_id).status_code == 200
+    assert submit(client, survey_id, temperature=28, temperatureSource="simulated", temperatureCategory="moderate").status_code == 200
+    assert publish(client, survey_id).status_code == 200
+    assert "Demo" in sent[-1]["Subject"]
+    assert DEMO_TEMPERATURE_NOTICE in sent[-1].get_body(preferencelist=("html",)).get_content()
 
 
 def book(client, **changes):
@@ -260,13 +262,13 @@ def test_prediction_failure_does_not_close_visit_or_publish_data(api, monkeypatc
     assert db.collection("farm_inputs").document(survey_id).get().to_dict()["status"] == "approved"
 
 
-def test_email_failure_happens_after_release_not_after_visit_approval(api, monkeypatch):
+def test_email_failure_does_not_undo_approval_or_release(api, monkeypatch):
     client, _ = api
     monkeypatch.setenv("SMTP_EMAIL", "test@example.invalid")
     monkeypatch.setenv("SMTP_PASSWORD", "not-a-real-password")
     def broken_smtp(*args, **kwargs):
         raise OSError("Simulated failure")
-    monkeypatch.setattr(main.smtplib, "SMTP", broken_smtp)
+    monkeypatch.setattr(email_notifications.smtplib, "SMTP", broken_smtp)
     survey_id = book(client)
     assert approve(client, survey_id).status_code == 200
     assert submit(client, survey_id).status_code == 200

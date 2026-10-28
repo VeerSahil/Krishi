@@ -1,3 +1,4 @@
+import 'app_language.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/survey.dart';
@@ -110,7 +111,8 @@ class ApiService {
       .map((snapshot) => snapshot.docs.map(Review.fromFirestore).toList());
 
   Future<String> sendChatMessage(String message) async {
-    final data = await _backend.post('/chat', {'message': message});
+    final data = await _backend.post(
+        '/chat', {'message': message, 'language': AppLanguage.instance.value});
     final response = data['response'];
     if (response is! String || response.trim().isEmpty) {
       throw const ApiException('The assistant did not return a response.');

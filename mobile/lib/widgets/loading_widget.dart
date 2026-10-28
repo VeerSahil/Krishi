@@ -1,3 +1,4 @@
+import '../services/app_language.dart';
 import 'package:flutter/material.dart';
 
 class LoadingWidget extends StatelessWidget {
@@ -10,10 +11,11 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(),
+          CircularProgressIndicator(),
           if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(message!, style: const TextStyle(color: Colors.grey)),
+            SizedBox(height: 16),
+            Text(tr(message!, context: context),
+                style: TextStyle(color: Colors.grey)),
           ],
         ],
       ),

@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../models/survey.dart';
 import '../../services/api_service.dart';
@@ -6,28 +7,33 @@ import 'survey_detail_screen.dart';
 class FarmMonitoringScreen extends StatelessWidget {
   const FarmMonitoringScreen({super.key});
 
-  Widget reading(String label, String value, IconData icon) => Expanded(
+  Widget reading(
+          BuildContext context, String label, String value, IconData icon) =>
+      Expanded(
           child: Column(children: [
-        Icon(icon, color: const Color(0xFF6A8758), size: 25),
-        const SizedBox(height: 8),
-        Text(value,
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w500)),
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Icon(icon, color: Color(0xFF6A8758), size: 25),
+        SizedBox(height: 8),
+        Text(tr(value, context: context),
+            style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500)),
+        Text(tr(label, context: context),
+            style: TextStyle(fontSize: 10, color: Colors.grey)),
       ]));
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7F1),
-      appBar: AppBar(title: const Text('My farm')),
+      backgroundColor: Color(0xFFF6F7F1),
+      appBar: AppBar(title: Text(tr('My farm', context: context))),
       body: StreamBuilder<List<Survey>>(
         stream: ApiService().farmerSurveysStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError)
-            return const Center(
-                child: Text('Unable to load farm readings. Please try again.'));
+            return Center(
+                child: Text(tr(
+                    'Unable to load farm readings. Please try again.',
+                    context: context)));
           if (!snapshot.hasData)
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           final groups = <String, List<Survey>>{};
           for (final survey in snapshot.data!) {
             final key =
@@ -36,20 +42,22 @@ class FarmMonitoringScreen extends StatelessWidget {
             groups.putIfAbsent(key, () => []).add(survey);
           }
           if (groups.isEmpty)
-            return const Center(
+            return Center(
                 child: Padding(
                     padding: EdgeInsets.all(30),
                     child: Text(
-                        'Book your first survey to start tracking your farm and its readings.',
+                        tr('Book your first survey to start tracking your farm and its readings.',
+                            context: context),
                         textAlign: TextAlign.center)));
-          return ListView(padding: const EdgeInsets.all(20), children: [
-            const Text('Your farm, at a glance.',
+          return ListView(padding: EdgeInsets.all(20), children: [
+            Text(tr('Your farm, at a glance.', context: context),
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 9),
-            const Text(
-                'These are the latest recorded field-visit readings. They update when our team submits a report.',
+            SizedBox(height: 9),
+            Text(
+                tr('These are the latest recorded field-visit readings. They update when our team submits a report.',
+                    context: context),
                 style: TextStyle(color: Colors.grey, height: 1.6)),
-            const SizedBox(height: 22),
+            SizedBox(height: 22),
             ...groups.values.map((history) {
               final latest = history.first;
               final measured = history
@@ -62,87 +70,101 @@ class FarmMonitoringScreen extends StatelessWidget {
               return Card(
                 color: Colors.white,
                 elevation: 0,
-                margin: const EdgeInsets.only(bottom: 20),
+                margin: EdgeInsets.only(bottom: 20),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Color(0xFFE1E7D8))),
+                    side: BorderSide(color: Color(0xFFE1E7D8))),
                 child: Padding(
-                    padding: const EdgeInsets.all(22),
+                    padding: EdgeInsets.all(22),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(latest.farmName,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 20, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 6),
+                        SizedBox(height: 6),
                         Text(
-                            latest.farmAddress.isEmpty
-                                ? latest.city
-                                : latest.farmAddress,
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12)),
-                        const SizedBox(height: 15),
-                        Text('Latest request: ${latest.status.label}',
-                            style: const TextStyle(
+                            tr(
+                                latest.farmAddress.isEmpty
+                                    ? latest.city
+                                    : latest.farmAddress,
+                                context: context),
+                            style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        SizedBox(height: 15),
+                        Text(
+                            tr('Latest request: ${latest.status.label}',
+                                context: context),
+                            style: TextStyle(
                                 fontSize: 12, color: Color(0xFF6C895A))),
-                        const Divider(height: 32),
+                        Divider(height: 32),
                         if (report == null)
-                          const Text(
-                              'Readings will appear after the field team visits your farm.')
+                          Text(tr(
+                              'Readings will appear after the field team visits your farm.',
+                              context: context))
                         else ...[
                           Row(children: [
                             reading(
+                                context,
                                 'Moisture',
                                 '${report.moisture!.toStringAsFixed(1)}%',
                                 Icons.water_drop_outlined),
                             reading(
+                                context,
                                 report.isDemo
                                     ? 'Demo temperature'
                                     : 'Temperature',
                                 '${report.temperature!.toStringAsFixed(1)} °C',
                                 Icons.thermostat_outlined),
                           ]),
-                          const SizedBox(height: 22),
+                          SizedBox(height: 22),
                           if (report.isDemo)
-                            const Padding(
+                            Padding(
                                 padding: EdgeInsets.only(bottom: 12),
-                                child: Text(Survey.demoNotice,
+                                child: Text(
+                                    tr(Survey.demoNotice, context: context),
                                     style:
                                         TextStyle(color: Color(0xFF9C6428)))),
                           Text(
-                              'Manual N / P / K: ${report.nitrogen ?? '—'} / ${report.phosphorus ?? '—'} / ${report.potassium ?? '—'}',
-                              style: const TextStyle(fontSize: 12)),
+                              tr('Manual N / P / K: ${report.nitrogen ?? '—'} / ${report.phosphorus ?? '—'} / ${report.potassium ?? '—'}',
+                                  context: context),
+                              style: TextStyle(fontSize: 12)),
                           if (report.measuredAt != null) ...[
-                            const SizedBox(height: 7),
+                            SizedBox(height: 7),
                             Text(
-                                'Recorded: ${report.measuredAt!.day}/${report.measuredAt!.month}/${report.measuredAt!.year}',
-                                style: const TextStyle(
+                                tr('Recorded: ${report.measuredAt!.day}/${report.measuredAt!.month}/${report.measuredAt!.year}',
+                                    context: context),
+                                style: TextStyle(
                                     fontSize: 10, color: Colors.grey)),
                           ],
                         ],
                         if (released.isNotEmpty) ...[
                           if (released.first.isDemo)
-                            const Text(Survey.demoNotice,
+                            Text(tr(Survey.demoNotice, context: context),
                                 style: TextStyle(color: Color(0xFF9C6428))),
-                          const Divider(height: 30),
-                          const Text('LAST RELEASED RECOMMENDATION',
+                          Divider(height: 30),
+                          Text(
+                              tr('LAST RELEASED RECOMMENDATION',
+                                  context: context),
                               style: TextStyle(
                                   fontSize: 9,
                                   letterSpacing: 1.2,
                                   color: Colors.grey)),
-                          const SizedBox(height: 7),
-                          Text(released.first.recommendedCrop ?? '—',
-                              style: const TextStyle(
+                          SizedBox(height: 7),
+                          Text(
+                              tr(released.first.recommendedCrop ?? '—',
+                                  context: context),
+                              style: TextStyle(
                                   fontSize: 22, color: Color(0xFF235B44))),
                         ],
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         OutlinedButton(
                             onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                     builder: (_) =>
                                         SurveyDetailScreen(survey: latest))),
-                            child: const Text('Track latest survey')),
+                            child: Text(
+                                tr('Track latest survey', context: context))),
                       ],
                     )),
               );

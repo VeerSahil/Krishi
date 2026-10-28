@@ -5,7 +5,9 @@ import 'package:http/http.dart' as http;
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
-  const ApiException(this.message, {this.statusCode});
+  final bool connectionFailure;
+  const ApiException(this.message,
+      {this.statusCode, this.connectionFailure = false});
 
   @override
   String toString() => message;
@@ -89,10 +91,12 @@ class BackendClient {
     } on TimeoutException {
       // Do not retry a timed-out mutation: it may already have succeeded.
       throw const ApiException(
-          'The server took too long. Check your surveys before trying again.');
+          'The server took too long. Check your surveys before trying again.',
+          connectionFailure: true);
     } on http.ClientException {
       throw const ApiException(
-          'Could not reach the server. Check your connection and try again.');
+          'Could not reach the server. Check your connection and try again.',
+          connectionFailure: true);
     }
   }
 

@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
@@ -33,12 +34,13 @@ class _ContactAdminScreenState extends State<ContactAdminScreen> {
       if (!mounted) return;
       _subject.clear();
       _message.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Message sent. An admin reply will appear here.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('Message sent. An admin reply will appear here.',
+              context: context))));
     } on Exception catch (error) {
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr(error.toString(), context: context))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -47,90 +49,101 @@ class _ContactAdminScreenState extends State<ContactAdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact admin')),
+      appBar: AppBar(title: Text(tr('Contact admin', context: context))),
       body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('How can we help?',
+              Text(tr('How can we help?', context: context),
                   style: TextStyle(fontSize: 23, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              const Text(
-                  'Ask about your visit, readings or recommendation. A member of the admin team will reply here.',
+              SizedBox(height: 8),
+              Text(
+                  tr('Ask about your visit, readings or recommendation. A member of the admin team will reply here.',
+                      context: context),
                   style: TextStyle(color: Colors.grey, height: 1.6)),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Form(
                   key: _formKey,
                   child: Column(children: [
                     TextFormField(
                         controller: _subject,
                         maxLength: 120,
-                        decoration: const InputDecoration(
-                            labelText: 'Subject', border: OutlineInputBorder()),
+                        decoration: InputDecoration(
+                            labelText: tr('Subject', context: context),
+                            border: OutlineInputBorder()),
                         validator: (value) =>
                             value == null || value.trim().length < 3
-                                ? 'Enter a subject'
+                                ? tr('Enter a subject', context: context)
                                 : null),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     TextFormField(
                         controller: _message,
                         minLines: 3,
                         maxLines: 6,
                         maxLength: 4000,
-                        decoration: const InputDecoration(
-                            labelText: 'Your message',
+                        decoration: InputDecoration(
+                            labelText: tr('Your message', context: context),
                             border: OutlineInputBorder()),
                         validator: (value) =>
                             value == null || value.trim().length < 5
-                                ? 'Tell us what you need help with'
+                                ? tr('Tell us what you need help with',
+                                    context: context)
                                 : null),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
                             onPressed: _sending ? null : _send,
-                            icon: const Icon(Icons.send, size: 18),
-                            label:
-                                Text(_sending ? 'Sending…' : 'Send to admin'))),
+                            icon: Icon(Icons.send, size: 18),
+                            label: Text(tr(
+                                _sending ? 'Sending…' : 'Send to admin',
+                                context: context)))),
                   ])),
-              const SizedBox(height: 30),
-              const Text('Your messages',
+              SizedBox(height: 30),
+              Text(tr('Your messages', context: context),
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: ApiService().supportMessagesStream(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError)
-                    return const Text(
-                        'Messages could not be loaded. Please check your connection.');
+                    return Text(tr(
+                        'Messages could not be loaded. Please check your connection.',
+                        context: context));
                   if (!snapshot.hasData)
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(child: CircularProgressIndicator());
                   if (snapshot.data!.docs.isEmpty)
-                    return const Text(
-                        'Your messages and admin replies will appear here.',
+                    return Text(
+                        tr('Your messages and admin replies will appear here.',
+                            context: context),
                         style: TextStyle(color: Colors.grey));
                   return Column(
                       children: snapshot.data!.docs.map((doc) {
                     final data = doc.data();
                     final reply = data['adminReply'] as String?;
                     return Card(
-                        margin: const EdgeInsets.only(bottom: 14),
+                        margin: EdgeInsets.only(bottom: 14),
                         child: Padding(
-                          padding: const EdgeInsets.all(17),
+                          padding: EdgeInsets.all(17),
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(data['subject'] ?? 'Message',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 8),
-                                Text(data['message'] ?? ''),
-                                const Divider(height: 26),
                                 Text(
-                                    reply == null
-                                        ? 'Waiting for admin reply'
-                                        : 'Admin reply',
+                                    tr(data['subject'] ?? 'Message',
+                                        context: context),
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600)),
+                                SizedBox(height: 8),
+                                Text(tr(data['message'] ?? '',
+                                    context: context)),
+                                Divider(height: 26),
+                                Text(
+                                    tr(
+                                        reply == null
+                                            ? 'Waiting for admin reply'
+                                            : 'Admin reply',
+                                        context: context),
                                     style: TextStyle(
                                         color: reply == null
                                             ? Colors.orange[800]
@@ -138,8 +151,8 @@ class _ContactAdminScreenState extends State<ContactAdminScreen> {
                                         fontWeight: FontWeight.w600,
                                         fontSize: 12)),
                                 if (reply != null) ...[
-                                  const SizedBox(height: 7),
-                                  Text(reply)
+                                  SizedBox(height: 7),
+                                  Text(tr(reply, context: context))
                                 ],
                               ]),
                         ));

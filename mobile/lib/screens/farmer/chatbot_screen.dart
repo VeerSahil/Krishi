@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'contact_admin_screen.dart';
@@ -42,7 +43,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (mounted && _scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -61,17 +62,17 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agro Assistant'),
+        title: Text(tr('Agro Assistant', context: context)),
         actions: [
           IconButton(
-            tooltip: 'Contact admin',
-            icon: const Icon(Icons.support_agent),
+            tooltip: tr('Contact admin', context: context),
+            icon: Icon(Icons.support_agent),
             onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const ContactAdminScreen())),
+                MaterialPageRoute(builder: (_) => ContactAdminScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.smart_toy_outlined),
-            tooltip: 'Powered by Gemini',
+            icon: Icon(Icons.smart_toy_outlined),
+            tooltip: tr('Powered by Gemini', context: context),
             onPressed: () {},
           ),
         ],
@@ -86,15 +87,17 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       children: [
                         Icon(Icons.eco,
                             size: 64, color: theme.colorScheme.primary),
-                        const SizedBox(height: 16),
-                        const Text('Ask me anything about farming!',
+                        SizedBox(height: 16),
+                        Text(
+                            tr('Ask me anything about farming!',
+                                context: context),
                             style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   )
                 : ListView.builder(
                     controller: _scrollCtrl,
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, i) {
                       final m = _messages[i];
@@ -104,8 +107,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
+                          margin: EdgeInsets.only(bottom: 10),
+                          padding: EdgeInsets.symmetric(
                               horizontal: 14, vertical: 10),
                           constraints: BoxConstraints(
                             maxWidth: MediaQuery.of(context).size.width * 0.78,
@@ -116,14 +119,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                                 : theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Text(m['text'] ?? ''),
+                          child: Text(isUser
+                              ? m['text'] ?? ''
+                              : tr(m['text'] ?? '', context: context)),
                         ),
                       );
                     },
                   ),
           ),
           if (_loading)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -133,35 +138,37 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       width: 16,
                       child: CircularProgressIndicator(strokeWidth: 2)),
                   SizedBox(width: 10),
-                  Text('Thinking...', style: TextStyle(color: Colors.grey)),
+                  Text(tr('Thinking...', context: context),
+                      style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 16),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _msgCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Ask about crops, soil, weather...',
+                      hintText: tr('Ask about crops, soil, weather...',
+                          context: context),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24)),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                     onSubmitted: (_) => _send(),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 FilledButton(
                   onPressed: _loading ? null : _send,
                   style: FilledButton.styleFrom(
-                    shape: const CircleBorder(),
-                    padding: const EdgeInsets.all(14),
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(14),
                   ),
-                  child: const Icon(Icons.send),
+                  child: Icon(Icons.send),
                 ),
               ],
             ),

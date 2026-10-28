@@ -1,3 +1,4 @@
+import 'services/app_language.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'auth/login_screen.dart';
@@ -9,7 +10,8 @@ import 'services/backend_client.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const SmartAgroApp());
+  await AppLanguage.instance.load();
+  runApp(SmartAgroApp());
 }
 
 class SmartAgroApp extends StatelessWidget {
@@ -17,19 +19,24 @@ class SmartAgroApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Krishi Farmer',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
-      home: const AuthGate(),
-    );
+    return LanguageApp(
+        create: (locale, builder) => MaterialApp(
+              locale: locale,
+              supportedLocales: LanguageApp.locales,
+              localizationsDelegates: LanguageApp.delegates,
+              builder: builder,
+              title: 'Krishi Farmer',
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: Color(0xFF2E7D32),
+                  brightness: Brightness.light,
+                ),
+                useMaterial3: true,
+                fontFamily: 'Roboto',
+              ),
+              home: AuthGate(),
+            ));
   }
 }
 
@@ -42,7 +49,7 @@ class AuthGate extends StatelessWidget {
       stream: AuthService().authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
@@ -56,11 +63,12 @@ class AuthGate extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                            'Unable to load your account. Please sign in again.'),
+                        Text(tr(
+                            'Unable to load your account. Please sign in again.',
+                            context: context)),
                         TextButton(
                           onPressed: () => AuthService().signOut(),
-                          child: const Text('Sign out'),
+                          child: Text(tr('Sign out', context: context)),
                         ),
                       ],
                     ),
@@ -68,33 +76,34 @@ class AuthGate extends StatelessWidget {
                 );
               }
               if (roleSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
+                return Scaffold(
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
               if (roleSnapshot.data == 'team') {
-                return const TeamAccountNotice();
+                return TeamAccountNotice();
               }
               if (roleSnapshot.data == 'admin') {
-                return const AdminAccountNotice();
+                return AdminAccountNotice();
               }
               if (roleSnapshot.data == 'farmer') {
-                return const FarmerHomeScreen();
+                return FarmerHomeScreen();
               }
               return Scaffold(
                 body: Center(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Text(
-                      'Your account profile needs setup. Please contact admin.'),
+                  Text(tr(
+                      'Your account profile needs setup. Please contact admin.',
+                      context: context)),
                   TextButton(
                       onPressed: () => AuthService().signOut(),
-                      child: const Text('Sign out')),
+                      child: Text(tr('Sign out', context: context))),
                 ])),
               );
             },
           );
         }
-        return const LoginScreen();
+        return LoginScreen();
       },
     );
   }
@@ -112,37 +121,41 @@ class AdminAccountNotice extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(30),
+            padding: EdgeInsets.all(30),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.admin_panel_settings_outlined,
+                Icon(Icons.admin_panel_settings_outlined,
                     size: 58, color: Color(0xFF235B44)),
-                const SizedBox(height: 20),
-                const Text('Your admin workspace is on the web.',
+                SizedBox(height: 20),
+                Text(
+                    tr('Your admin workspace is on the web.', context: context),
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24)),
-                const SizedBox(height: 12),
-                const Text(
-                    'This phone app is for farmers. Monitor farmers and process surveys from the admin dashboard on your computer.',
+                SizedBox(height: 12),
+                Text(
+                    tr('This phone app is for farmers. Monitor farmers and process surveys from the admin dashboard on your computer.',
+                        context: context),
                     textAlign: TextAlign.center),
-                const SizedBox(height: 24),
-                SelectableText(url, textAlign: TextAlign.center),
-                const SizedBox(height: 12),
+                SizedBox(height: 24),
+                SelectableText(tr(url, context: context),
+                    textAlign: TextAlign.center),
+                SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: url));
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Admin dashboard link copied')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(tr('Admin dashboard link copied',
+                              context: context))));
                     }
                   },
-                  icon: const Icon(Icons.copy, size: 17),
-                  label: const Text('Copy dashboard link'),
+                  icon: Icon(Icons.copy, size: 17),
+                  label: Text(tr('Copy dashboard link', context: context)),
                 ),
                 TextButton(
                     onPressed: () => AuthService().signOut(),
-                    child: const Text('Sign out')),
+                    child: Text(tr('Sign out', context: context))),
               ],
             ),
           ),
@@ -162,22 +175,22 @@ class TeamAccountNotice extends StatelessWidget {
         body: SafeArea(
             child: Center(
                 child: Padding(
-      padding: const EdgeInsets.all(30),
+      padding: EdgeInsets.all(30),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.agriculture_outlined,
-            size: 58, color: Color(0xFF235B44)),
-        const SizedBox(height: 20),
-        const Text('Use Krishi Team for your field visits.',
+        Icon(Icons.agriculture_outlined, size: 58, color: Color(0xFF235B44)),
+        SizedBox(height: 20),
+        Text(tr('Use Krishi Team for your field visits.', context: context),
             textAlign: TextAlign.center, style: TextStyle(fontSize: 24)),
-        const SizedBox(height: 14),
-        const Text(
-            'Install the separate Krishi Team app to open your assigned visits and submit readings. You can also use the team website below.',
+        SizedBox(height: 14),
+        Text(
+            tr('Install the separate Krishi Team app to open your assigned visits and submit readings. You can also use the team website below.',
+                context: context),
             textAlign: TextAlign.center),
-        const SizedBox(height: 22),
-        SelectableText(url, textAlign: TextAlign.center),
+        SizedBox(height: 22),
+        SelectableText(tr(url, context: context), textAlign: TextAlign.center),
         TextButton(
             onPressed: () => AuthService().signOut(),
-            child: const Text('Sign out')),
+            child: Text(tr('Sign out', context: context))),
       ]),
     ))));
   }

@@ -1,3 +1,4 @@
+import '../services/app_language.dart';
 import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
@@ -19,13 +20,13 @@ class CustomButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: loading ? null : onPressed,
       icon: loading
-          ? const SizedBox(
+          ? SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(icon),
-      label: Text(label),
+      label: Text(tr(label, context: context)),
     );
   }
 }

@@ -1,9 +1,11 @@
 """Three-role survey lifecycle. Draft recommendations never live in farmer-readable documents."""
 from datetime import datetime, timezone
 from uuid import uuid4
+from hashlib import sha256
+import json
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from google.api_core.exceptions import FailedPrecondition, Conflict
 from google.cloud.firestore_v1.base_query import FieldFilter
@@ -11,6 +13,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from admin_portal import AdminStaticFiles, page_documents
 from config import BASE_DIR, get_db
 from ml_pipeline import run_ml_pipeline
+from email_notifications import queue_survey_email, deliver_event
 from schemas import FieldReadingsRequest, temperature_metadata
 
 VISIT_STATES = ("approved", "in_progress")
@@ -20,12 +23,20 @@ def now():
     return datetime.now(timezone.utc)
 
 
-def apply_changes(snapshot, changes, db):
+def apply_changes(snapshot, changes, db, background=None):
+    ref = db.collection("farm_inputs").document(snapshot.id)
     try:
-        db.collection("farm_inputs").document(snapshot.id).update(
-            changes, option=db.write_option(last_update_time=snapshot.update_time))
+        if background is None:
+            ref.update(changes, option=db.write_option(last_update_time=snapshot.update_time))
+            return
+        batch = db.batch()
+        batch.update(ref, changes, option=db.write_option(last_update_time=snapshot.update_time))
+        identifier = queue_survey_email(batch, db, snapshot.id, {**snapshot.to_dict(), **changes})
+        batch.commit()
     except (FailedPrecondition, Conflict):
         raise HTTPException(409, "This survey changed. Refresh it before continuing.") from None
+    if identifier:
+        background.add_task(deliver_event, identifier, db)
 
 
 def assigned_visit(survey_id, user, db):
@@ -37,7 +48,7 @@ def assigned_visit(survey_id, user, db):
     return snapshot
 
 
-def admin_action(request, admin, db, background, send_email):
+def admin_action(request, admin, db, background):
     snapshot = db.collection("farm_inputs").document(request.surveyId).get()
     if not snapshot.exists:
         raise HTTPException(404, "Survey not found")
@@ -53,13 +64,13 @@ def admin_action(request, admin, db, background, send_email):
             "status": "approved", "assignedTeamId": request.teamId,
             "assignedTeamName": team.to_dict().get("name") or "Field team",
             "approvedBy": admin["uid"], "approvedAt": now(), "adminNotes": request.notes,
-        }, db)
+        }, db, background)
         return {"status": "approved", "message": "Visit approved and assigned to the field team"}
     if request.action == "reject":
         if status not in ("pending", "approved", "in_progress", "awaiting_review", "failed"):
             raise HTTPException(409, "This survey can no longer be rejected")
         apply_changes(snapshot, {"status": "rejected", "rejectedAt": now(),
-                                "rejectedBy": admin["uid"], "adminNotes": request.notes}, db)
+                                "rejectedBy": admin["uid"], "adminNotes": request.notes}, db, background)
         return {"status": "rejected", "message": "Survey rejected"}
     if status != "awaiting_review":
         raise HTTPException(409, "A team report must be reviewed before publishing a result")
@@ -80,10 +91,7 @@ def admin_action(request, admin, db, background, send_email):
         "adminNotes": request.notes if request.notes is not None else survey.get("adminNotes"),
         **temperature_metadata(prediction.get("temperatureSource"), prediction.get("temperatureCategory")),
     }
-    apply_changes(snapshot, changes, db)
-    background.add_task(send_email, survey.get("farmerEmail", ""), survey.get("farmerName", "Farmer"),
-                        prediction["recommended_crop"], prediction["predicted_rainfall_mm"],
-                        snapshot.id, db, changes["recommendationNotice"])
+    apply_changes(snapshot, changes, db, background)
     return {"status": "completed", "message": "Recommendation released to the farmer",
             "crop": prediction["recommended_crop"], "rainfall": prediction["predicted_rainfall_mm"],
             **temperature_metadata(prediction.get("temperatureSource"), prediction.get("temperatureCategory"))}
@@ -115,18 +123,24 @@ def register_field_routes(app, verify_team, serialize_survey):
         return serialize_survey(assigned_visit(survey_id, user, db))
 
     @router.post("/visits/{survey_id}/start")
-    def start(survey_id: str, user=Depends(verify_team), db=Depends(get_db)):
+    def start(survey_id: str, background: BackgroundTasks, user=Depends(verify_team), db=Depends(get_db)):
         snapshot = assigned_visit(survey_id, user, db)
         if snapshot.to_dict().get("status") != "approved":
             raise HTTPException(409, "Only an approved visit can be started")
-        apply_changes(snapshot, {"status": "in_progress", "visitStartedAt": now()}, db)
+        apply_changes(snapshot, {"status": "in_progress", "visitStartedAt": now()}, db, background)
         return {"status": "in_progress", "message": "Visit started"}
 
     @router.post("/visits/{survey_id}/readings")
-    def submit(survey_id: str, request: FieldReadingsRequest,
+    def submit(survey_id: str, request: FieldReadingsRequest, background: BackgroundTasks,
                user=Depends(verify_team), db=Depends(get_db)):
         snapshot = assigned_visit(survey_id, user, db)
         survey = snapshot.to_dict()
+        fingerprint = sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+        if request.clientSubmissionId and survey.get("measurementSubmissionId") == request.clientSubmissionId:
+            if survey.get("measurementFingerprint") != fingerprint:
+                raise HTTPException(409, "This submission ID was already used with different readings.")
+            return {"status": survey["status"], "surveyId": survey_id, "duplicate": True,
+                    "message": "This report was already saved."}
         if survey.get("status") not in VISIT_STATES:
             raise HTTPException(409, "Readings can only be submitted for an approved field visit")
         try:
@@ -139,15 +153,19 @@ def register_field_routes(app, verify_team, serialize_survey):
             raise HTTPException(422, "Check the survey location and all five readings.") from None
         except Exception:
             raise HTTPException(503, "Prediction is unavailable. Your visit is still open; retry submission.") from None
-        submission_id = uuid4().hex
+        submission_id = request.clientSubmissionId or uuid4().hex
         metadata = request.temperature_metadata()
         prediction.update(metadata)
         changes = {
-            "status": "awaiting_review", **request.model_dump(exclude={"notes"}),
+            "status": "awaiting_review", **request.model_dump(exclude={"notes", "clientSubmissionId"}),
+            "measurementFingerprint": fingerprint,
+            "fieldEvidence": {**request.model_dump(mode="json", exclude={"clientSubmissionId"}),
+                              "recordedBy": user["uid"], "receivedAt": now(),
+                              "submissionId": submission_id},
             **metadata,
             "measuredAt": now(), "teamSubmittedAt": now(), "teamSubmittedBy": user["uid"],
             "teamNotes": request.notes, "inputSource": "field_team_manual",
-            "nutrientSource": "manual", "measurementSubmissionId": submission_id,
+            "nutrientSource": request.nutrientSource, "measurementSubmissionId": submission_id,
         }
         draft = {**prediction, "surveyId": survey_id, "userId": survey["userId"],
                  "teamId": user["uid"], "submissionId": submission_id}
@@ -157,10 +175,17 @@ def register_field_routes(app, verify_team, serialize_survey):
         batch.update(db.collection("farm_inputs").document(survey_id), changes,
                      option=db.write_option(last_update_time=snapshot.update_time))
         batch.set(db.collection("survey_predictions").document(survey_id), draft)
+        identifier = queue_survey_email(batch, db, survey_id, {**survey, **changes})
         try:
             batch.commit()
         except (FailedPrecondition, Conflict):
+            saved = assigned_visit(survey_id, user, db).to_dict()
+            if (request.clientSubmissionId and saved.get("measurementSubmissionId") == submission_id
+                    and saved.get("measurementFingerprint") == fingerprint):
+                return {"status": saved["status"], "surveyId": survey_id, "duplicate": True}
             raise HTTPException(409, "This visit changed. Refresh it before submitting again.") from None
+        if identifier:
+            background.add_task(deliver_event, identifier, db)
         return {"status": "awaiting_review", "surveyId": survey_id,
                 "message": "Readings saved. The recommendation is waiting for admin release."}
 

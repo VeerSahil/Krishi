@@ -9,13 +9,19 @@
 #include <hd44780ioClass/hd44780_I2Cexp.h>
 hd44780_I2Cexp lcd;
 bool lcdReady = false;
+// Custom degree glyph avoids depending on the LCD character-ROM variant.
+const uint8_t DEGREE_GLYPH_SLOT = 0;
+uint8_t degreeGlyph[8] = {0x06, 0x09, 0x09, 0x06, 0, 0, 0, 0};
 #endif
 
 const uint8_t MOISTURE_PIN = A0;
 const uint8_t MODULE_PIN = 2;
-// Replace only after recording your probe's actual dry/wet readings.
-const int DRY_RAW = -1;
-const int WET_RAW = -1;
+// PROVISIONAL relative calibration from user-reported readings:
+// dry AIR approximately 525; wet SOIL approximately 255-272.
+// 264 is the rounded midpoint of that reported wet range, not a measured sample.
+// This is an air-to-wet-soil relative percentage, NOT volumetric water content.
+const int DRY_RAW = 525;
+const int WET_RAW = 264;
 
 enum DemoBand { DEMO_LOW, DEMO_MODERATE, DEMO_HIGH };
 DemoBand band = DEMO_MODERATE;
@@ -101,13 +107,15 @@ void setup() {
   Wire.begin();
   Wire.setWireTimeout(25000, true);
   lcdReady = lcd.begin(16, 2) == 0;
+  if (lcdReady) lcd.createChar(DEGREE_GLYPH_SLOT, degreeGlyph);
   Serial.println(lcdReady ? F("LCD ready.") : F("LCD unavailable; Serial demo continues."));
 #endif
   Serial.println(F("DEMO: generated temperature, NOT a temperature measurement."));
   Serial.println(F("Commands: L=low, M=moderate, H=high, R=resample, F=follow wired LM393 D0 on D2."));
   Serial.println(F("Temperature drifts 0.1-1.0 C every 2 seconds. S pauses/resumes drift for copying."));
   Serial.println(F("F: signal HIGH -> demo 30-35; LOW -> demo 20-29.9. Low demo is selected with L."));
-  Serial.println(F("Startup is manual moderate demo. Wire probe AOUT to A0; calibrate moisture separately."));
+  Serial.println(F("Startup is manual moderate demo. Probe AOUT goes to A0."));
+  Serial.println(F("PROVISIONAL relative moisture: AIR 525=0%, wet SOIL estimated 264=100%. Not volumetric water content."));
 }
 
 void loop() {
@@ -130,6 +138,7 @@ void loop() {
   Serial.print(F("{\"moisture_raw\":")); Serial.print(raw);
   Serial.print(F(",\"moisture\":"));
   if (moisture >= 0) Serial.print(moisture); else Serial.print(F("null"));
+  Serial.print(F(",\"moistureUnit\":\"relative_percent\",\"moistureCalibration\":\"provisional_air_to_wet_soil\""));
   Serial.print(F(",\"temperature\":")); Serial.print(temperature, 1);
   Serial.print(F(",\"temperatureSource\":\"simulated\",\"temperatureCategory\":\""));
   Serial.print(bandName());
@@ -139,11 +148,12 @@ void loop() {
 #if USE_I2C_LCD
   if (lcdReady) {
     lcd.setCursor(0, 0); lcd.print(F("                ")); lcd.setCursor(0, 0);
-    if (moisture >= 0) { lcd.print(F("Moist idx: ")); lcd.print(moisture); lcd.print('%'); }
+    if (moisture >= 0) { lcd.print(F("Rel moist: ")); lcd.print(moisture); lcd.print('%'); }
     else { lcd.print(F("Raw A0: ")); lcd.print(raw); }
     lcd.setCursor(0, 1); lcd.print(F("                ")); lcd.setCursor(0, 1);
     lcd.print(F("DEMO ")); lcd.print(band == DEMO_LOW ? 'L' : band == DEMO_HIGH ? 'H' : 'M');
-    lcd.print(' '); lcd.print(temperature, 1); lcd.print('C');
+    lcd.print(' '); lcd.print(temperature, 1);
+    lcd.write(DEGREE_GLYPH_SLOT); lcd.print('C');
   }
 #endif
 }

@@ -1,3 +1,4 @@
+import '../services/app_language.dart';
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import 'signup_screen.dart';
@@ -35,7 +36,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(tr(e.toString(), context: context)),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -49,98 +52,103 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
                 Icon(widget.team ? Icons.assignment_outlined : Icons.eco,
                     size: 72, color: theme.colorScheme.primary),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
-                  widget.team ? 'Krishi Team' : 'Krishi Farmer',
+                  tr(widget.team ? 'Krishi Team' : 'Krishi Farmer',
+                      context: context),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.primary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
-                  widget.team
-                      ? 'Your assigned visits and field reports.'
-                      : 'Your farm. Your surveys. Your recommendations.',
+                  tr(
+                      widget.team
+                          ? 'Your assigned visits and field reports.'
+                          : 'Your farm. Your surveys. Your recommendations.',
+                      context: context),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
+                  decoration: InputDecoration(
+                    labelText: tr('Email', context: context),
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) => v == null || !v.contains('@')
-                      ? 'Enter a valid email'
+                      ? tr('Enter a valid email', context: context)
                       : null,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordCtrl,
                   obscureText: _obscure,
                   decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    border: const OutlineInputBorder(),
+                    labelText: tr('Password', context: context),
+                    prefixIcon: Icon(Icons.lock_outlined),
+                    border: OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
                           _obscure ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: (v) =>
-                      v == null || v.length < 6 ? 'Minimum 6 characters' : null,
+                  validator: (v) => v == null || v.length < 6
+                      ? tr('Minimum 6 characters', context: context)
+                      : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 FilledButton(
                   onPressed: _loading ? null : _login,
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: _loading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('Sign In', style: TextStyle(fontSize: 16)),
+                      : Text(tr('Sign In', context: context),
+                          style: TextStyle(fontSize: 16)),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (widget.team)
-                  const Text(
-                    'Use the team account provided by your administrator.',
+                  Text(
+                    tr('Use the team account provided by your administrator.',
+                        context: context),
                     textAlign: TextAlign.center,
                   )
                 else
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account? "),
+                      Text(tr("Don't have an account? ", context: context)),
                       GestureDetector(
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(
-                              builder: (_) => const SignupScreen()),
+                          MaterialPageRoute(builder: (_) => SignupScreen()),
                         ),
                         child: Text(
-                          'Sign Up',
+                          tr('Sign Up', context: context),
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,

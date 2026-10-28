@@ -1,3 +1,4 @@
+import '../services/app_language.dart';
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
@@ -40,7 +41,9 @@ class _SignupScreenState extends State<SignupScreen> {
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(tr(e.toString(), context: context)),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -52,10 +55,10 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: Text(tr('Create Account', context: context))),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -63,74 +66,75 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 Icon(Icons.person_add,
                     size: 60, color: theme.colorScheme.primary),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 TextFormField(
                   controller: _nameCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
+                  decoration: InputDecoration(
+                    labelText: tr('Full Name', context: context),
                     prefixIcon: Icon(Icons.person_outlined),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
+                  decoration: InputDecoration(
+                    labelText: tr('Email', context: context),
                     prefixIcon: Icon(Icons.email_outlined),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) => v == null || !v.contains('@')
-                      ? 'Enter a valid email'
+                      ? tr('Enter a valid email', context: context)
                       : null,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 TextFormField(
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number',
+                  decoration: InputDecoration(
+                    labelText: tr('Phone Number', context: context),
                     prefixIcon: Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) => v == null || v.length < 10
-                      ? 'Enter valid phone number'
+                      ? tr('Enter valid phone number', context: context)
                       : null,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordCtrl,
                   obscureText: _obscure,
                   decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    border: const OutlineInputBorder(),
+                    labelText: tr('Password', context: context),
+                    prefixIcon: Icon(Icons.lock_outlined),
+                    border: OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
                           _obscure ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: (v) =>
-                      v == null || v.length < 6 ? 'Minimum 6 characters' : null,
+                  validator: (v) => v == null || v.length < 6
+                      ? tr('Minimum 6 characters', context: context)
+                      : null,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 FilledButton(
                   onPressed: _loading ? null : _signup,
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: _loading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('Create Account',
+                      : Text(tr('Create Account', context: context),
                           style: TextStyle(fontSize: 16)),
                 ),
               ],

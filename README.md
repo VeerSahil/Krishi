@@ -153,6 +153,7 @@ Git-ignored `.tool-state/account-setup/` for new accounts. It sends no email.
 | `survey_predictions` | Draft model output awaiting admin release | Admin only |
 | `support_threads` | Farmer messages and admin replies | Owning farmer or admin |
 | `reviews` | Completed-survey feedback | Signed-in users |
+| `survey_email_events` | Saved notification content and delivery attempts | Backend only; admin API exposes safe status fields |
 
 Writes to surveys, drafts, support and reviews go through the authenticated
 backend. Firestore rules deny direct client writes. Readings and their draft
@@ -303,8 +304,147 @@ are independent of Gemini and do not require SMTP. This implementation stores
 one current admin reply per support request; a farmer can send a new request
 for a follow-up.
 
-Optional SMTP result notifications run after admin releases a recommendation.
-Missing SMTP configuration or a delivery failure does not undo publication.
+### Farmer status emails
+
+Approval notifications are implemented locally but still need sender authentication
+and deployment before they run on the live backend. The configured local sender
+is the operator's selected college mailbox; no mailbox password was supplied or
+changed. No real email was sent during implementation or automated tests.
+
+By default, the backend sends a transactional email when:
+
+- Admin approves and assigns a visit: **Farm visit approved**.
+- Admin releases a recommendation: **Your survey results are ready**.
+
+The recipient comes from the farmer's stored authenticated account, never a
+request-supplied destination. The approval message includes the survey reference
+and farm name. It does not invent a visit date, include internal admin notes or
+reveal an unreleased recommendation. Released demo results preserve the simulated
+temperature notice. No farmer APK change is required for these emails.
+
+Email jobs are saved in `survey_email_events` in the same atomic batch as the
+status update, then attempted immediately as a background task. Rejected or
+conflicting approval attempts cannot send approval mail. Duplicate tasks cannot
+both claim a job. Sender credentials and complete email content remain backend-only;
+clients cannot read or write the jobs under the deny-by-default Firestore rules.
+The admin survey details show each notification's safe delivery state.
+
+`sent` means the provider accepted the message, not that it reached an inbox or
+was opened. No delivery/open webhook has been added. Missing sender configuration,
+network failure or provider refusal does not undo a successful survey action.
+This is immediate best-effort sending, not guaranteed instantaneous delivery.
+If the server restarts before its background task runs, the queued job remains
+saved for an operator retry; there is no continuously running retry worker.
+
+Choose backend environment settings for the hosting environment:
+
+```dotenv
+EMAIL_PROVIDER=gmail
+EMAIL_STATUSES=approved,completed
+EMAIL_FROM=sender@example.com
+# Gmail HTTPS, after one-time Google consent:
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+# Alternative HTTPS option:
+RESEND_API_KEY=
+# SMTP option:
+SMTP_EMAIL=sender@example.com
+SMTP_PASSWORD=
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+```
+
+`auto` uses configured Gmail OAuth first, then Resend when its API key is present, otherwise SMTP. Use `gmail`, `resend`, `smtp`, or `disabled` to select explicitly. Local Gmail SMTP uses an App Password
+where the account permits one, with 2-Step Verification enabled. Do not paste
+account passwords or API keys into chat, frontend files or Git. A college mailbox
+may have administrator restrictions or use another mail host; confirm its provider
+and allowed authentication method before supplying credentials.
+
+#### Connect the selected Gmail sender
+
+Gmail API support is implemented, but the selected mailbox is **not connected**
+until its owner completes Google authorization. The setup check currently finds
+no desktop OAuth client JSON or optional OAuth setup library. No Google permission
+was granted and no real email was sent by this implementation.
+
+For the selected college Gmail account, use the `gmail` HTTPS provider. It sends
+through that account rather than verifying ownership of the college's entire DNS
+domain. Each fresh access token is checked against the selected sender's verified
+Google identity. Choosing a different Google account cannot silently change the
+From address. The requested scopes allow sending mail and confirming the account
+email; they do not allow reading or modifying the inbox.
+
+One-time setup in the dedicated Google Cloud project `krishi-gmail-sender`
+(Firebase remains in `smart-agro-ai-fd974`):
+
+1. Enable the [Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=krishi-gmail-sender).
+2. Configure Google Auth Platform branding/audience and the requested scopes.
+   If the app is External and in Testing, add the selected sender as a test user.
+   Use Internal only if the project belongs to the college organization and its
+   administrator permits this app. College policies may require administrator approval.
+3. Create an OAuth client of type **Desktop app**, download its JSON, and save it
+   as `.tool-state/gmail/client_secret.json` (or pass its path to `--client-secrets`).
+   This is different from the Firebase service-account key and Android configuration.
+4. From an ordinary local terminal at the repository root, run:
+
+```powershell
+python -m pip install -r requirements-gmail-setup.txt
+python scripts/connect_gmail.py --check
+python scripts/connect_gmail.py --connect
+```
+
+On Windows, double-click `connect_gmail.bat` in the repository root to install
+the optional OAuth helper in an isolated local environment and start the same
+connection flow without typing commands. It still needs the account owner to
+review Google consent.
+
+The official Google OAuth helper opens the system browser using a loopback-only
+callback and PKCE. The account owner completes Google sign-in and reviews the
+send-email permission. The helper checks that Google returned the exact selected
+verified account, then saves the refresh token in ignored local `.env`. It sends
+no test email and prints no tokens. Do not paste passwords, JSON client secrets
+or refresh tokens into chat. A normal Gmail password or App Password is not
+needed for the `gmail` HTTPS provider.
+
+Restart the local backend after connecting. For the live backend, import the
+privately generated `.tool-state/gmail/render.env` into Render environment settings
+and deploy the changed backend. It contains only mail-related settings; existing
+Firebase and Gemini settings must be retained. Keep this export private.
+Google may revoke or expire refresh tokens; External apps in Testing typically
+receive seven-day refresh tokens when requesting Gmail access. Plan the consent
+app's production/internal configuration appropriately before long-term use.
+
+Render Free blocks outbound SMTP on ports 25, 465 and 587; Gmail API and Resend
+use HTTPS. Resend remains an alternative and requires a verified sending domain
+for arbitrary farmer recipients. Its default test domain sends only to the account
+owner. Merely setting a college address as `EMAIL_FROM` does not verify that
+college domain for Resend. Gmail API uses the sender's own Google authorization
+instead. Do not change the selected sender without the operator's instruction.
+
+Optional extra statuses are `pending`, `in_progress`, `awaiting_review` and
+`rejected`; include them in `EMAIL_STATUSES` only when wanted. A pending confirmation
+runs once at booking, not repeatedly whenever someone checks the status.
+
+Inspect a saved event without sending mail:
+
+```powershell
+python scripts/retry_status_email.py --survey-id SURVEY_ID --status approved
+```
+
+A trusted operator may add `--send` to retry that one queued, failed or unconfigured
+message. The helper skips outdated status updates, already accepted mail and events
+left in `sending` after an uncertain interruption. Resend retries use a stable
+idempotency key and identical saved content/sender within its 24-hour window;
+older attempted Resend messages are not retried. Gmail API and SMTP cannot guarantee duplicate
+suppression after a lost connection, so review a failed attempt before an explicit
+retry. This helper is not exposed as a public sending endpoint.
+
+References: [Gmail send API](https://developers.google.com/workspace/gmail/api/guides/sending),
+[Google desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app),
+[Render Free restrictions](https://render.com/docs/free),
+[Google App Passwords](https://support.google.com/mail/answer/185833),
+[Resend sender-domain requirements](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
 
 ## Render deployment
 
@@ -417,3 +557,36 @@ Standalone Dart client checks, after dependency resolution:
 cd mobile
 dart tool/check_backend_client.dart
 ```
+
+
+### Crop plans, offline visits and evidence records
+
+Farmer and Team Android apps now include an English / Hindi / Marathi selector. The selected language is stored privately on the phone; chatbot requests include its language code. User-entered notes, lab documents and admin replies retain their original text. The admin and fallback team websites remain in English.
+
+From the farmer home, open **Crop plan & farm evidence**. Each survey has its own dated record (names alone do not identify the same plot). Add a proposed crop, planned sowing date and irrigation source. The check lists missing evidence, flags a past sowing date, gives a rainfed planning reminder, and compares with a recommendation only after admin releases it. It never certifies suitability. Up to 20 previous plan versions are retained per survey. Current records are derived from server-written timestamps; older surveys explicitly show that detailed provenance was not recorded.
+
+The Team app caches visits that have already been opened/listed online. Before leaving, sign in and load assigned visits. During the visit, enter readings, declare their sources, and use **Save draft on phone** (partial drafts are allowed). A soil-test entry requires the original test reference and units; an optional HTTPS report link can refer to an existing lab document. Links are stored as references, not fetched or independently verified. Files are not uploaded by the app.
+
+**Submit readings for review** first persists an immutable local report, then attempts sync. Saved reports survive restarts and are isolated by Firebase account UID. They sync while the Team app is open (refresh, foreground resume or periodic polling), or via **Sync saved reports**. No background or closed-app delivery is promised. The server rechecks role, assignment and visit status. A stable submission ID plus payload fingerprint acknowledges repeated deliveries without overwriting readings or repeating lifecycle actions. Conflicting reports remain on the phone with an error; explicit discard is available. Do not uninstall or clear app data before syncing.
+
+Android Keystore AES-GCM protects the private local cache and language preference; Android backups are disabled, and minimum Android version is now 6.0 (API 23). Drafts require explicit saving. The fallback team website continues to require connectivity.
+
+Field reports preserve device capture time (team-declared), server receipt time, recorded-by UID, source labels, soil-test reference/units/link and the submission ID. Admin can inspect these with the farmer's crop plan before releasing the recommendation. Farmer evidence history includes release time/reviewer and hides unreleased model results. History is paginated and ownership checked.
+
+The existing model remains a demonstration model with undocumented training NPK units. Entering a lab unit does **not** convert inputs or establish model compatibility. Historical rainfall estimates are not live weather forecasts. Plan checks always require expert interpretation, even when all fields are present.
+
+Validation commands after installing Flutter dependencies:
+
+```powershell
+python -m pytest -q
+cd mobile
+flutter analyze
+flutter test
+```
+
+For physical-device validation: load an approved visit online, disable connectivity, save an incomplete draft, close/reopen the app, finish and submit the report, restore connectivity, then sync. Verify exactly one server report and no farmer-visible draft recommendation. Also test a visit cancelled/reassigned while the phone was offline. Switch languages with an existing screen open, restart, and check that the language is retained.
+
+These source changes require a backend deployment and newly built farmer/team APKs before they are available to existing installations.
+
+
+To update the phone apps after source changes, double-click `update_apps.bat` in the project root. It builds both release APKs with the existing JDK 17 setup and opens `mobile/build/apks` only after both builds succeed. Send the fresh `krishi-farmer.apk` / `krishi-team.apk` to the corresponding phones and choose **Update**. Keep installed apps and pending field reports until the update succeeds. The shortcut skips test execution because the current sandbox cannot run the normal Flutter test transport; checks should still run in an unrestricted developer environment before distribution. Building APKs does not deploy backend API changes.

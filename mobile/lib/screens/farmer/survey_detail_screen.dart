@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../models/survey.dart';
@@ -8,30 +9,30 @@ class SurveyDetailScreen extends StatelessWidget {
   final Survey survey;
   const SurveyDetailScreen({super.key, required this.survey});
 
-  Widget row(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
+  Widget row(BuildContext context, String label, String value) => Padding(
+        padding: EdgeInsets.symmetric(vertical: 7),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
-              child: Text(label,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey))),
+              child: Text(tr(label, context: context),
+                  style: TextStyle(fontSize: 12, color: Colors.grey))),
           Expanded(
-              child: Text(value,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w500))),
+              child: Text(tr(value, context: context),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
         ]),
       );
 
-  Widget section(String title, List<Widget> children) => Card(
-        margin: const EdgeInsets.only(bottom: 17),
+  Widget section(BuildContext context, String title, List<Widget> children) =>
+      Card(
+        margin: EdgeInsets.only(bottom: 17),
         child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.w600)),
-                const Divider(height: 24),
+                Text(tr(title, context: context),
+                    style:
+                        TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                Divider(height: 24),
                 ...children
               ],
             )),
@@ -47,15 +48,19 @@ class SurveyDetailScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.hasError)
           return Scaffold(
-              appBar: AppBar(title: const Text('Survey details')),
-              body: const Center(
-                  child:
-                      Text('Unable to load this survey. Please try again.')));
+              appBar:
+                  AppBar(title: Text(tr('Survey details', context: context))),
+              body: Center(
+                  child: Text(tr(
+                      'Unable to load this survey. Please try again.',
+                      context: context))));
         if (snapshot.hasData && !snapshot.data!.exists)
           return Scaffold(
-              appBar: AppBar(title: const Text('Survey details')),
-              body: const Center(
-                  child: Text('This survey is no longer available.')));
+              appBar:
+                  AppBar(title: Text(tr('Survey details', context: context))),
+              body: Center(
+                  child: Text(tr('This survey is no longer available.',
+                      context: context))));
         final s =
             snapshot.hasData ? Survey.fromFirestore(snapshot.data!) : survey;
         final stage = s.status == SurveyStatus.pending
@@ -70,38 +75,40 @@ class SurveyDetailScreen extends StatelessWidget {
                             ? 4
                             : -1;
         return Scaffold(
-          appBar: AppBar(title: const Text('Track your survey')),
-          body: ListView(padding: const EdgeInsets.all(20), children: [
-            Text(s.farmName,
-                style:
-                    const TextStyle(fontSize: 26, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Text(s.status.label,
-                style: const TextStyle(color: Color(0xFF6C895A))),
-            const SizedBox(height: 22),
-            section('Visit progress', [
+          appBar:
+              AppBar(title: Text(tr('Track your survey', context: context))),
+          body: ListView(padding: EdgeInsets.all(20), children: [
+            Text(tr(s.farmName, context: context),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Text(tr(s.status.label, context: context),
+                style: TextStyle(color: Color(0xFF6C895A))),
+            SizedBox(height: 22),
+            section(context, 'Visit progress', [
               for (var index = 0; index < 5; index++)
                 Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: EdgeInsets.symmetric(vertical: 8),
                     child: Row(children: [
                       Icon(
                           stage >= index
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                           color: stage >= index
-                              ? const Color(0xFF63864D)
+                              ? Color(0xFF63864D)
                               : Colors.grey[300],
                           size: 20),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                           child: Text(
-                              [
-                                'Request sent',
-                                'Visit approved & team assigned',
-                                'Field team visiting',
-                                'Admin reviewing team report',
-                                'Recommendation released'
-                              ][index],
+                              tr(
+                                  [
+                                    'Request sent',
+                                    'Visit approved & team assigned',
+                                    'Field team visiting',
+                                    'Admin reviewing team report',
+                                    'Recommendation released'
+                                  ][index],
+                                  context: context),
                               style: TextStyle(
                                   fontSize: 12,
                                   color: stage >= index
@@ -109,51 +116,54 @@ class SurveyDetailScreen extends StatelessWidget {
                                       : Colors.grey))),
                     ])),
             ]),
-            section('Farm information', [
-              row('Address', s.farmAddress.isEmpty ? s.city : s.farmAddress),
-              row('City', s.city),
-              row('Soil', s.soilType),
-              row('Season', '${s.season} ${s.year}'),
+            section(context, 'Farm information', [
+              row(context, 'Address',
+                  s.farmAddress.isEmpty ? s.city : s.farmAddress),
+              row(context, 'City', s.city),
+              row(context, 'Soil', s.soilType),
+              row(context, 'Season', '${s.season} ${s.year}'),
               if (s.assignedTeamName.isNotEmpty)
-                row('Assigned team', s.assignedTeamName),
+                row(context, 'Assigned team', s.assignedTeamName),
             ]),
             if (s.isDemo)
-              const Padding(
+              Padding(
                   padding: EdgeInsets.only(bottom: 20),
-                  child: Text(Survey.demoNotice,
+                  child: Text(tr(Survey.demoNotice, context: context),
                       style: TextStyle(color: Color(0xFF9C6428)))),
             if (s.moisture != null)
-              section('Team-recorded readings', [
-                row('Moisture', '${s.moisture!.toStringAsFixed(1)}%'),
+              section(context, 'Team-recorded readings', [
+                row(context, 'Moisture', '${s.moisture!.toStringAsFixed(1)}%'),
                 row(
+                    context,
                     s.isDemo ? 'Temperature (SIMULATED)' : 'Temperature',
                     s.temperature == null
                         ? '—'
                         : '${s.temperature!.toStringAsFixed(1)} °C'),
-                row('Manual nitrogen', '${s.nitrogen ?? '—'}'),
-                row('Manual phosphorus', '${s.phosphorus ?? '—'}'),
-                row('Manual potassium', '${s.potassium ?? '—'}'),
+                row(context, 'Manual nitrogen', '${s.nitrogen ?? '—'}'),
+                row(context, 'Manual phosphorus', '${s.phosphorus ?? '—'}'),
+                row(context, 'Manual potassium', '${s.potassium ?? '—'}'),
               ]),
             if (s.status == SurveyStatus.awaitingReview)
-              const Padding(
+              Padding(
                   padding: EdgeInsets.only(bottom: 20),
                   child: Text(
-                      'The team report has arrived. Admin is reviewing your crop recommendation.',
+                      tr('The team report has arrived. Admin is reviewing your crop recommendation.',
+                          context: context),
                       style: TextStyle(color: Color(0xFF9C7B38), height: 1.6))),
             if (s.isCompleted)
-              section('Your released recommendation', [
-                Text(s.recommendedCrop ?? '—',
-                    style: const TextStyle(
-                        fontSize: 29, color: Color(0xFF235B44))),
-                const SizedBox(height: 10),
+              section(context, 'Your released recommendation', [
+                Text(tr(s.recommendedCrop ?? '—', context: context),
+                    style: TextStyle(fontSize: 29, color: Color(0xFF235B44))),
+                SizedBox(height: 10),
                 row(
+                    context,
                     'Estimated rainfall',
                     s.predictedRainfall == null
                         ? '—'
                         : '${s.predictedRainfall!.toStringAsFixed(1)} mm'),
                 OutlinedButton.icon(
-                    icon: const Icon(Icons.star_outline),
-                    label: const Text('Review this survey'),
+                    icon: Icon(Icons.star_outline),
+                    label: Text(tr('Review this survey', context: context)),
                     onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -161,12 +171,14 @@ class SurveyDetailScreen extends StatelessWidget {
                                 surveyId: s.id, surveyCompleted: true)))),
               ]),
             if (s.status == SurveyStatus.rejected)
-              const Text(
-                  'This request was rejected or cancelled. Contact admin if you need help.',
+              Text(
+                  tr('This request was rejected or cancelled. Contact admin if you need help.',
+                      context: context),
                   style: TextStyle(color: Colors.grey)),
             OutlinedButton.icon(
-                icon: const Icon(Icons.support_agent),
-                label: const Text('Contact admin about this survey'),
+                icon: Icon(Icons.support_agent),
+                label: Text(
+                    tr('Contact admin about this survey', context: context)),
                 onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(

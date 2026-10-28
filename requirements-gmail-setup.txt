@@ -1,0 +1,2 @@
+# Optional one-time sender connection tool; not needed on Render.
+google-auth-oauthlib>=1.2.2,<2

@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../auth/auth_service.dart';
 import 'book_survey_screen.dart';
@@ -6,6 +7,7 @@ import 'reviews_screen.dart';
 import 'chatbot_screen.dart';
 import 'farm_monitoring_screen.dart';
 import 'contact_admin_screen.dart';
+import 'farm_evidence_screen.dart';
 
 class FarmerHomeScreen extends StatefulWidget {
   const FarmerHomeScreen({super.key});
@@ -26,12 +28,12 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
         onChat: () => setState(() => _selectedIndex = 3),
         onHelp: () => setState(() => _selectedIndex = 4),
         onReviews: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const ReviewsScreen())),
+            context, MaterialPageRoute(builder: (_) => ReviewsScreen())),
       ),
-      const FarmMonitoringScreen(),
-      const MySurveysScreen(),
-      const ChatbotScreen(),
-      const ContactAdminScreen(),
+      FarmMonitoringScreen(),
+      MySurveysScreen(),
+      ChatbotScreen(),
+      ContactAdminScreen(),
     ];
     return Scaffold(
       body: pages[_selectedIndex],
@@ -39,24 +41,26 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),
-        destinations: const [
+        destinations: [
           NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home),
-              label: 'Home'),
+              label: tr('Home', context: context)),
           NavigationDestination(
               icon: Icon(Icons.grass_outlined),
               selectedIcon: Icon(Icons.grass),
-              label: 'My farm'),
+              label: tr('My farm', context: context)),
           NavigationDestination(
               icon: Icon(Icons.assignment_outlined),
               selectedIcon: Icon(Icons.assignment),
-              label: 'Surveys'),
+              label: tr('Surveys', context: context)),
           NavigationDestination(
               icon: Icon(Icons.chat_bubble_outline),
               selectedIcon: Icon(Icons.chat_bubble),
-              label: 'Assistant'),
-          NavigationDestination(icon: Icon(Icons.support_agent), label: 'Help'),
+              label: tr('Assistant', context: context)),
+          NavigationDestination(
+              icon: Icon(Icons.support_agent),
+              label: tr('Help', context: context)),
         ],
       ),
     );
@@ -81,113 +85,130 @@ class _HomeTab extends StatelessWidget {
     final theme = Theme.of(context);
     final name = AuthService().currentUser?.displayName;
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7F1),
+      backgroundColor: Color(0xFFF6F7F1),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F7F1),
-        title: const Row(children: [
+        backgroundColor: Color(0xFFF6F7F1),
+        title: Row(children: [
           Icon(Icons.eco_outlined, color: Color(0xFF235B44)),
           SizedBox(width: 8),
-          Text('Krishi Farmer', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text(tr('Krishi Farmer', context: context),
+              style: TextStyle(fontWeight: FontWeight.w600)),
         ]),
         actions: [
           IconButton(
-              tooltip: 'Sign out',
-              icon: const Icon(Icons.logout),
+              tooltip: tr('Sign out', context: context),
+              icon: Icon(Icons.logout),
               onPressed: () => AuthService().signOut()),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        padding: EdgeInsets.fromLTRB(20, 18, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Hello, ${name == null || name.isEmpty ? 'Farmer' : name}.',
+            Text(
+                tr('Hello, ${name == null || name.isEmpty ? tr('Farmer', context: context) : name}.',
+                    context: context),
                 style: theme.textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 7),
-            const Text('A little more clarity for your next harvest.',
+            SizedBox(height: 7),
+            Text(
+                tr('A little more clarity for your next harvest.',
+                    context: context),
                 style: TextStyle(color: Color(0xFF76826F))),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               decoration: BoxDecoration(
-                  color: const Color(0xFF183D32),
+                  color: Color(0xFF183D32),
                   borderRadius: BorderRadius.circular(22)),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.grass_outlined,
+                    Icon(Icons.grass_outlined,
                         color: Color(0xFFC0D59B), size: 34),
-                    const SizedBox(height: 16),
-                    const Text('Know your farm.\nPlan your crop.',
+                    SizedBox(height: 16),
+                    Text(
+                        tr('Know your farm.\nPlan your crop.',
+                            context: context),
                         style: TextStyle(
                             fontSize: 27,
                             height: 1.2,
                             fontWeight: FontWeight.w500,
                             color: Colors.white)),
-                    const SizedBox(height: 12),
-                    const Text(
-                        'Request a survey and get a crop recommendation for your farm.',
+                    SizedBox(height: 12),
+                    Text(
+                        tr('Request a survey and get a crop recommendation for your farm.',
+                            context: context),
                         style: TextStyle(
                             color: Color(0xFFBBCDBB),
                             height: 1.6,
                             fontSize: 13)),
-                    const SizedBox(height: 22),
+                    SizedBox(height: 22),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFD9E7BA),
-                          foregroundColor: const Color(0xFF183D32),
-                          padding: const EdgeInsets.symmetric(
+                          backgroundColor: Color(0xFFD9E7BA),
+                          foregroundColor: Color(0xFF183D32),
+                          padding: EdgeInsets.symmetric(
                               horizontal: 18, vertical: 14)),
                       onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const BookSurveyScreen())),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Book a farm survey'),
+                              builder: (_) => BookSurveyScreen())),
+                      icon: Icon(Icons.add, size: 18),
+                      label: Text(tr('Book a farm survey', context: context)),
                     ),
                   ]),
             ),
-            const SizedBox(height: 28),
-            const Text('YOUR FARM WORKSPACE',
+            SizedBox(height: 28),
+            Text(tr('YOUR FARM WORKSPACE', context: context),
                 style: TextStyle(
                     fontSize: 10,
                     letterSpacing: 1.8,
                     color: Color(0xFF829272),
                     fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
+            _ActionCard(
+                icon: Icons.fact_check_outlined,
+                title: 'Crop plan & farm evidence',
+                subtitle:
+                    'Check your chosen crop and view dated survey records',
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => FarmEvidenceScreen()))),
+            SizedBox(height: 10),
             _ActionCard(
                 icon: Icons.grass_outlined,
                 title: 'Monitor my farm',
                 subtitle: 'See recorded moisture, temperature and nutrients',
                 onTap: onFarm),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _ActionCard(
                 icon: Icons.support_agent,
                 title: 'Contact our admin team',
                 subtitle: 'Ask about a visit, report or recommendation',
                 onTap: onHelp),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _ActionCard(
                 icon: Icons.assignment_outlined,
                 title: 'My surveys',
                 subtitle: 'Track your requests and see crop results',
                 onTap: onSurveys),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _ActionCard(
                 icon: Icons.chat_bubble_outline,
                 title: 'Ask the farming assistant',
                 subtitle: 'Questions about crops, soil or irrigation',
                 onTap: onChat),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             _ActionCard(
                 icon: Icons.star_outline,
                 title: 'Your experience matters',
                 subtitle: 'Read reviews or review a completed survey',
                 onTap: onReviews),
-            const SizedBox(height: 24),
-            const Text(
-                'Request → Approval → Field visit → Admin release → Your result',
+            SizedBox(height: 24),
+            Text(
+                tr('Request → Approval → Field visit → Admin release → Your result',
+                    context: context),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 10, color: Color(0xFF8B9782), height: 1.7)),
@@ -216,19 +237,17 @@ class _ActionCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(13),
-          side: const BorderSide(color: Color(0xFFE4E8DC))),
+          side: BorderSide(color: Color(0xFFE4E8DC))),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: Icon(icon, color: const Color(0xFF6C895A), size: 28),
-        title: Text(title,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: Icon(icon, color: Color(0xFF6C895A), size: 28),
+        title: Text(tr(title, context: context),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(subtitle,
-                style:
-                    const TextStyle(fontSize: 11, color: Color(0xFF8A9680)))),
-        trailing:
-            const Icon(Icons.arrow_forward, size: 17, color: Color(0xFF829272)),
+            padding: EdgeInsets.only(top: 4),
+            child: Text(tr(subtitle, context: context),
+                style: TextStyle(fontSize: 11, color: Color(0xFF8A9680)))),
+        trailing: Icon(Icons.arrow_forward, size: 17, color: Color(0xFF829272)),
         onTap: onTap,
       ),
     );

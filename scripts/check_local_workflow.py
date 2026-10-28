@@ -23,8 +23,9 @@ def main():
         if host != "127.0.0.1" or not separator or not port.isdigit():
             raise RuntimeError("Run through the local demo emulators; missing/invalid " + variable)
         hosts[variable] = value
-    for variable in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "SMTP_EMAIL", "SMTP_PASSWORD"):
+    for variable in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "SMTP_EMAIL", "SMTP_PASSWORD", "RESEND_API_KEY", "EMAIL_FROM", "GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "GMAIL_REFRESH_TOKEN"):
         os.environ[variable] = ""
+    os.environ["EMAIL_PROVIDER"] = "disabled"
     os.environ["GCLOUD_PROJECT"] = PROJECT
 
     import firebase_admin

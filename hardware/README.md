@@ -182,3 +182,14 @@ temperature unavailable and raw moisture until actual dry/wet calibration.
 An additional simple serial-only `.ino` found in an unsaved IDE folder was
 preserved separately in `recovered_serial_test/`; it is not the program that
 produces the legacy LCD pages.
+
+
+## Prepared percentage / degree-C display update
+
+The current demo source uses provisional user-reported references: dry **air** approximately 525 and wet **soil** 255-272. `WET_RAW=264` is the rounded midpoint of that reported range; it is a derived provisional reference, not a measured median and not a dry-soil/wet-soil calibration. The displayed `Rel moist: ...%` maps air to 0 and that wet-soil reference to 100, clamped to 0-100. It is not volumetric soil-water content. Replace these references after a controlled calibration if using the gadget beyond a demonstration.
+
+The second LCD line keeps `DEMO` and displays its simulated temperature with a custom degree glyph followed by C. No actual temperature sensor was added.
+
+Double-click `update_arduino_display.bat` from the project root with the Uno on COM7 and all Serial Monitors closed. It compiles the exact source with the local hd44780 library, reads a unique backup of existing flash, uploads with verification enabled, and checks the serial startup for `LCD ready.` plus a report. A failed backup prevents uploading. The file does not update the phone apps or the backend.
+
+This update has been prepared locally. In-session serial access was denied and the sandboxed AVR compiler reported an Illegal System DLL Relocation error; upload and physical LCD verification are pending execution on the user's PC. Earlier hardware verification results above refer to the earlier firmware, not this prepared update.

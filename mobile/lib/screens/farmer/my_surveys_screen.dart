@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../models/survey.dart';
 import '../../services/api_service.dart';
@@ -49,34 +50,35 @@ class MySurveysScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Surveys')),
+      appBar: AppBar(title: Text(tr('My Surveys', context: context))),
       body: StreamBuilder<List<Survey>>(
         stream: ApiService().farmerSurveysStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text(
-                    'Unable to load data. Check your connection and try again.'),
+                child: Text(tr(
+                    'Unable to load data. Check your connection and try again.',
+                    context: context)),
               ),
             );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingWidget(message: 'Loading surveys...');
+            return LoadingWidget(message: 'Loading surveys...');
           }
 
           final surveys = snapshot.data ?? [];
 
           if (surveys.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.assignment_outlined, size: 70, color: Colors.grey),
                   SizedBox(height: 12),
                   Text(
-                    'No surveys booked yet',
+                    tr('No surveys booked yet', context: context),
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
@@ -85,14 +87,14 @@ class MySurveysScreen extends StatelessWidget {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(14),
             itemCount: surveys.length,
             itemBuilder: (context, index) {
               final s = surveys[index];
 
               return Card(
                 elevation: 2,
-                margin: const EdgeInsets.only(bottom: 14),
+                margin: EdgeInsets.only(bottom: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -105,7 +107,7 @@ class MySurveysScreen extends StatelessWidget {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -114,15 +116,15 @@ class MySurveysScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                s.city,
-                                style: const TextStyle(
+                                tr(s.city, context: context),
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: _statusColor(s.status).withOpacity(0.12),
@@ -136,9 +138,10 @@ class MySurveysScreen extends StatelessWidget {
                                     size: 14,
                                     color: _statusColor(s.status),
                                   ),
-                                  const SizedBox(width: 4),
+                                  SizedBox(width: 4),
                                   Text(
-                                    _statusLabel(s.status),
+                                    tr(_statusLabel(s.status),
+                                        context: context),
                                     style: TextStyle(
                                       color: _statusColor(s.status),
                                       fontSize: 12,
@@ -151,56 +154,62 @@ class MySurveysScreen extends StatelessWidget {
                           ],
                         ),
 
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
 
                         Text(
-                          '${s.soilType} Soil • ${s.season} ${s.year}',
-                          style: const TextStyle(color: Colors.black54),
+                          tr('${s.soilType} Soil • ${s.season} ${s.year}',
+                              context: context),
+                          style: TextStyle(color: Colors.black54),
                         ),
 
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
 
                         // ── Status-specific content ────────────────────
                         if (s.status == SurveyStatus.pending)
-                          const Text(
-                            '⏳ Waiting for survey processing...',
+                          Text(
+                            tr('⏳ Waiting for survey processing...',
+                                context: context),
                             style: TextStyle(color: Colors.orange),
                           ),
 
                         if (s.status == SurveyStatus.inProgress)
-                          const Text(
-                            '⚙️ ML analysis in progress...',
+                          Text(
+                            tr('⚙️ ML analysis in progress...',
+                                context: context),
                             style: TextStyle(color: Colors.blue),
                           ),
 
                         if (s.status == SurveyStatus.failed)
-                          const Text(
-                            '❌ Processing failed. Contact support.',
+                          Text(
+                            tr('❌ Processing failed. Contact support.',
+                                context: context),
                             style: TextStyle(color: Colors.red),
                           ),
 
                         if (s.status == SurveyStatus.rejected)
-                          const Text(
-                            '🚫 Survey was rejected by admin.',
+                          Text(
+                            tr('🚫 Survey was rejected by admin.',
+                                context: context),
                             style: TextStyle(color: Colors.grey),
                           ),
 
                         // Completed / done — show results
                         if (s.isDemo)
-                          const Text(Survey.demoNotice,
+                          Text(tr(Survey.demoNotice, context: context),
                               style: TextStyle(color: Color(0xFF9C6428))),
                         if (s.isCompleted) ...[
                           if (s.predictedRainfall != null)
                             Text(
-                              '🌧 Rainfall: ${s.predictedRainfall!.toStringAsFixed(1)} mm',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
+                              tr('🌧 Rainfall: ${s.predictedRainfall!.toStringAsFixed(1)} mm',
+                                  context: context),
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           if (s.recommendedCrop != null)
                             Text(
-                              '🌱 Recommended Crop: ${s.recommendedCrop}',
-                              style: const TextStyle(
+                              tr('🌱 Recommended Crop: ${s.recommendedCrop}',
+                                  context: context),
+                              style: TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
                               ),

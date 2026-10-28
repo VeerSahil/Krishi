@@ -1,11 +1,8 @@
 """Smart Agro AI API: Firebase-authenticated surveys and manual-input predictions."""
 import asyncio
-import html
 import logging
 import os
-import smtplib
 from datetime import datetime, timezone
-from email.mime.text import MIMEText
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
 from fastapi.encoders import jsonable_encoder
@@ -19,6 +16,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 
 from config import ConfigurationError, firebase_configured, gemini_key, get_db
 from chatbot import answer_chat
+from email_notifications import COLLECTION as EMAIL_EVENTS, email_configuration, queue_survey_email, deliver_event
 from ml_pipeline import (CITY_MAP, SEASON_MAP, TEMP_CATEGORY_MAP, get_soil_nutrients,
                          run_ml_pipeline, supported_soil_types)
 from schemas import (AdminActionRequest, BookSurveyRequest, ChatRequest, FarmRequest,
@@ -26,7 +24,7 @@ from schemas import (AdminActionRequest, BookSurveyRequest, ChatRequest, FarmReq
 from field_workflow import admin_action, apply_changes
 
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Agro AI Backend", version="1.2.0")
+app = FastAPI(title="Agro AI Backend", version="1.3.0")
 origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "*").split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins,
                    allow_credentials="*" not in origins,
@@ -135,7 +133,8 @@ def health():
     return {"status": "ok", "timestamp": utcnow(),
             "firebaseConfigured": firebase_configured(),
             "chatbotConfigured": bool(gemini_key()),
-            "emailConfigured": bool(os.getenv("SMTP_EMAIL") and os.getenv("SMTP_PASSWORD")),
+            "emailConfigured": email_configuration()["configured"],
+            "emailProvider": email_configuration()["provider"],
             "sensorInput": "manual"}
 
 
@@ -155,7 +154,7 @@ def get_seasons():
 
 
 @app.post("/survey/book")
-def book_survey(request: BookSurveyRequest, user=Depends(verify_farmer), db=Depends(get_db)):
+def book_survey(request: BookSurveyRequest, background: BackgroundTasks, user=Depends(verify_farmer), db=Depends(get_db)):
     profile = db.collection("users").document(user["uid"]).get()
     profile_data = profile.to_dict() if profile.exists else {}
     data = {
@@ -176,7 +175,12 @@ def book_survey(request: BookSurveyRequest, user=Depends(verify_farmer), db=Depe
         "emailSent": False, "emailStatus": "not_sent",
     }
     ref = db.collection("farm_inputs").document()
-    ref.set(data)
+    batch = db.batch()
+    batch.set(ref, data)
+    identifier = queue_survey_email(batch, db, ref.id, data)
+    batch.commit()
+    if identifier:
+        background.add_task(deliver_event, identifier, db)
     return {"surveyId": ref.id, "status": "pending",
             "message": "Survey booked successfully. Admin will process it soon."}
 
@@ -232,43 +236,13 @@ def get_pending_surveys(admin=Depends(verify_admin), db=Depends(get_db)):
 @app.post("/admin/process-survey")
 def process_survey(request: AdminActionRequest, background: BackgroundTasks,
                    admin=Depends(verify_admin), db=Depends(get_db)):
-    return admin_action(request, admin, db, background, send_prediction_email)
+    return admin_action(request, admin, db, background)
 
 
 @app.get("/admin/all-surveys")
 def get_all_surveys(admin=Depends(verify_admin), db=Depends(get_db)):
     docs = db.collection("farm_inputs").order_by("createdAt", direction="DESCENDING").limit(100).stream()
     return {"surveys": [serialize_survey(doc) for doc in docs]}
-
-
-def send_prediction_email(email, name, crop, rainfall, survey_id, db, demo_notice=None):
-    email_address, password = os.getenv("SMTP_EMAIL"), os.getenv("SMTP_PASSWORD")
-    status = "not_configured"
-    if email_address and password and email:
-        body = (f"<p>Hello {html.escape(name or 'Farmer')}!</p>"
-                f"<p>Survey {html.escape(survey_id)} results:</p>"
-                f"<p>Recommended crop: {html.escape(crop)}<br>"
-                f"Estimated rainfall: {rainfall:.2f} mm</p>")
-        if demo_notice:
-            body += f"<p><strong>{html.escape(demo_notice)}</strong></p>"
-        msg = MIMEText(body, "html", "utf-8")
-        msg["Subject"] = "Your Agro AI Demo Results" if demo_notice else "Your Agro AI Survey Results"
-        msg["From"], msg["To"] = email_address, email
-        try:
-            with smtplib.SMTP(os.getenv("SMTP_SERVER", "smtp.gmail.com"),
-                              int(os.getenv("SMTP_PORT", "587")), timeout=10) as server:
-                server.starttls()
-                server.login(email_address, password)
-                server.send_message(msg)
-            status = "sent"
-        except Exception as error:
-            logger.warning("Survey email failed: %s", type(error).__name__)
-            status = "failed"
-    try:
-        db.collection("farm_inputs").document(survey_id).update(
-            {"emailSent": status == "sent", "emailStatus": status})
-    except Exception as error:
-        logger.warning("Email status update failed: %s", type(error).__name__)
 
 
 def recent_chat_context(db, uid):
@@ -292,7 +266,9 @@ async def chat_with_gemini(request: ChatRequest, user=Depends(verify_farmer), db
                 asyncio.to_thread(recent_chat_context, db, user["uid"]), timeout=4)
         except Exception as error:
             logger.warning("Chat context unavailable: %s", type(error).__name__)
-    return await answer_chat(request.message, context)
+    if request.language == "en":
+        return await answer_chat(request.message, context)
+    return await answer_chat(request.message, context, language=request.language)
 
 
 @app.post("/predict")
@@ -323,6 +299,11 @@ def get_survey_details(survey_id: str, user=Depends(get_current_user), db=Depend
     if data.get("userId") != user["uid"] and not is_admin:
         raise HTTPException(403, "Access denied")
     result = serialize_survey(snapshot)
+    if is_admin:
+        events = db.collection(EMAIL_EVENTS).where(filter=FieldFilter("surveyId", "==", survey_id)).stream(timeout=8, retry=None)
+        result["emailNotifications"] = sorted([
+            {key: doc.to_dict().get(key) for key in ("surveyStatus", "deliveryStatus", "createdAt", "updatedAt", "provider", "attempts")}
+            for doc in events], key=lambda item: item.get("createdAt") or utcnow())
     if is_admin and data.get("status") == "awaiting_review":
         draft = db.collection("survey_predictions").document(survey_id).get()
         if draft.exists:
@@ -336,3 +317,6 @@ from support import register_support_routes
 register_support_routes(app, verify_farmer, verify_admin)
 register_field_routes(app, verify_team, serialize_survey)
 register_admin_routes(app, verify_admin, serialize_survey)
+
+from farm_planning import register_planning_routes
+register_planning_routes(app, verify_farmer, get_db)

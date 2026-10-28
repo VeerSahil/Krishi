@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import 'pending_surveys_screen.dart';
 import 'all_surveys_screen.dart';
@@ -12,7 +13,7 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
 
-  final _pages = const [
+  final _pages = [
     PendingSurveysScreen(),
     AllSurveysScreen(),
   ];
@@ -24,16 +25,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.pending_outlined),
             selectedIcon: Icon(Icons.pending),
-            label: 'Pending',
+            label: tr('Pending', context: context),
           ),
           NavigationDestination(
             icon: Icon(Icons.list_alt_outlined),
             selectedIcon: Icon(Icons.list_alt),
-            label: 'All Surveys',
+            label: tr('All Surveys', context: context),
           ),
         ],
       ),

@@ -44,10 +44,16 @@ if ($jdkRelease -notmatch 'JAVA_VERSION="17\.') { throw 'Use JDK 17 for this Gra
 
 $flutterCommand = (Get-Command flutter -ErrorAction Stop).Source
 $flutterRoot = Split-Path -Parent (Split-Path -Parent $flutterCommand)
-$sdkPath = $env:ANDROID_SDK_ROOT
-if (-not $sdkPath) { $sdkPath = $env:ANDROID_HOME }
-if (-not $sdkPath) { $sdkPath = Join-Path $env:LOCALAPPDATA 'Android/sdk' }
-if (-not (Test-Path -LiteralPath $sdkPath)) { throw 'Set ANDROID_SDK_ROOT to your Android SDK folder.' }
+$sdkCandidates = @($env:ANDROID_SDK_ROOT, $env:ANDROID_HOME)
+$localPropertiesPath = Join-Path $mobileRoot 'android/local.properties'
+if (Test-Path -LiteralPath $localPropertiesPath) {
+    $sdkLine = Get-Content -LiteralPath $localPropertiesPath | Where-Object { $_ -match '^sdk\.dir=' } | Select-Object -First 1
+    if ($sdkLine) { $sdkCandidates += $sdkLine.Substring(8).Replace('\\', '\').Replace('\:', ':') }
+}
+if ($env:LOCALAPPDATA) { $sdkCandidates += Join-Path $env:LOCALAPPDATA 'Android/sdk' }
+if ($env:USERPROFILE) { $sdkCandidates += Join-Path $env:USERPROFILE 'AppData/Local/Android/sdk' }
+$sdkPath = $sdkCandidates | Where-Object { $_ -and (Test-Path -LiteralPath (Join-Path $_ 'platform-tools')) } | Select-Object -First 1
+if (-not $sdkPath) { throw 'Set ANDROID_SDK_ROOT to your Android SDK folder.' }
 
 Push-Location $mobileRoot
 try {
@@ -64,6 +70,7 @@ try {
     }
     $versionName = $Matches[1]
     $versionCode = $Matches[2]
+    Write-Host "Building Krishi $versionName (build $versionCode). Existing apps can be updated in place with the same signing key."
     # This is generated, Git-ignored, machine-specific configuration.
     @(
         'sdk.dir=' + $sdkPath.Replace('\', '/')

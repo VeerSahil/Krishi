@@ -1,5 +1,5 @@
 """Validated request contracts; existing Flutter field names are preserved."""
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -61,6 +61,13 @@ class FarmRequest(TemperatureInput):
         return self
 
 
+class CropPlanRequest(RequestModel):
+    surveyId: str = Field(min_length=1, max_length=200, pattern=r"^[^/]+$")
+    proposedCrop: str = Field(min_length=2, max_length=80)
+    sowingDate: date | None = None
+    irrigation: Literal["unknown", "rainfed", "irrigated", "supplemental"] = "unknown"
+
+
 class BookSurveyRequest(RequestModel):
     farmName: str = Field(default="My farm", min_length=1, max_length=100)
     farmAddress: str = Field(min_length=8, max_length=500)
@@ -102,6 +109,28 @@ class AdminActionRequest(RequestModel):
 
 
 class FieldReadingsRequest(TemperatureInput):
+    clientSubmissionId: str | None = Field(default=None, min_length=16, max_length=80, pattern=r"^[a-zA-Z0-9_-]+$")
+    capturedAt: datetime | None = None
+    nutrientUnit: Literal["unknown", "mg/kg", "kg/ha"] = "unknown"
+    nutrientSource: Literal["manual", "soil_test"] = "manual"
+    soilTestReference: str | None = Field(default=None, max_length=200)
+    soilTestAttachmentUrl: str | None = Field(default=None, max_length=1500)
+    moistureSource: Literal["manual", "sensor"] = "manual"
+
+    @model_validator(mode="after")
+    def validate_evidence(self):
+        if self.soilTestAttachmentUrl:
+            from urllib.parse import urlparse
+            url = urlparse(self.soilTestAttachmentUrl)
+            if url.scheme != "https" or not url.hostname or url.username or url.password:
+                raise ValueError("Report attachments must use an HTTPS link without embedded credentials.")
+        if self.nutrientSource == "soil_test" and (not self.soilTestReference or self.nutrientUnit == "unknown"):
+            raise ValueError("A soil test requires a reference and nutrient units.")
+        if self.capturedAt is not None:
+            if self.capturedAt.tzinfo is None or self.capturedAt > datetime.now(timezone.utc):
+                raise ValueError("Capture time must include a timezone and cannot be in the future.")
+        return self
+
     moisture: float = Field(ge=0, le=100)
     nitrogen: float = Field(ge=0, le=10000)
     phosphorus: float = Field(ge=0, le=10000)
@@ -120,6 +149,7 @@ class SupportReplyRequest(RequestModel):
 
 
 class ChatRequest(RequestModel):
+    language: Literal["en", "hi", "mr"] = "en"
     message: str = Field(min_length=1, max_length=4000)
     # Accepted for compatibility; identity always comes from the verified token.
     userId: str | None = None

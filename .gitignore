@@ -7,6 +7,9 @@ firebase_key.json.json
 *firebase-adminsdk*.json
 *.pem
 *.key
+# Downloaded Google OAuth client files are private setup material.
+client_secret*.json
+gmail_oauth*.json
 
 # Python
 __pycache__/

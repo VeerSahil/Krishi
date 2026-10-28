@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../auth/auth_service.dart';
 import '../../models/review.dart';
@@ -48,8 +49,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         _commentCtrl.clear();
         setState(() => _rating = 5);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Review submitted!'),
+          SnackBar(
+            content: Text(tr('Review submitted!', context: context)),
             backgroundColor: Colors.green,
           ),
         );
@@ -58,7 +59,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to submit: ${e.toString()}'),
+            content:
+                Text(tr('Failed to submit: ${e.toString()}', context: context)),
             backgroundColor: Colors.red,
           ),
         );
@@ -73,24 +75,24 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final canWrite = widget.surveyId != null && widget.surveyCompleted;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reviews')),
+      appBar: AppBar(title: Text(tr('Reviews', context: context))),
       body: Column(
         children: [
           // ── Write review form (only for completed surveys) ──
           if (widget.surveyId != null) ...[
             if (canWrite)
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Write a Review',
+                        Text(tr('Write a Review', context: context),
                             style: TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         // Star rating
                         Row(
                           children: List.generate(5, (i) {
@@ -104,28 +106,29 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                             );
                           }),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         TextField(
                           controller: _commentCtrl,
                           maxLines: 3,
-                          decoration: const InputDecoration(
-                            hintText: 'Share your experience...',
+                          decoration: InputDecoration(
+                            hintText: tr('Share your experience...',
+                                context: context),
                             border: OutlineInputBorder(),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
                             onPressed: _submitting ? null : _submitReview,
                             child: _submitting
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 18,
                                     width: 18,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2, color: Colors.white),
                                   )
-                                : const Text('Submit Review'),
+                                : Text(tr('Submit Review', context: context)),
                           ),
                         ),
                       ],
@@ -136,18 +139,19 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             else
               // Survey not completed — block review writing
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Card(
                   color: Colors.orange[50],
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Row(
                       children: [
                         Icon(Icons.lock_outline, color: Colors.orange[700]),
-                        const SizedBox(width: 12),
-                        const Expanded(
+                        SizedBox(width: 12),
+                        Expanded(
                           child: Text(
-                            'You can only leave a review after your survey has been completed.',
+                            tr('You can only leave a review after your survey has been completed.',
+                                context: context),
                             style:
                                 TextStyle(color: Colors.orange, fontSize: 13),
                           ),
@@ -157,7 +161,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   ),
                 ),
               ),
-            const Divider(height: 0),
+            Divider(height: 0),
           ],
 
           // ── Reviews list ────────────────────────────
@@ -168,51 +172,51 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   : ApiService().reviewsStream(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return const Center(
+                  return Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
-                      child: Text(
-                          'Unable to load data. Check your connection and try again.'),
+                      child: Text(tr(
+                          'Unable to load data. Check your connection and try again.',
+                          context: context)),
                     ),
                   );
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const LoadingWidget();
+                  return LoadingWidget();
                 }
                 final reviews = snapshot.data ?? [];
                 if (reviews.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.rate_review_outlined,
                             size: 48, color: Colors.grey),
                         SizedBox(height: 8),
-                        Text('No reviews yet',
+                        Text(tr('No reviews yet', context: context),
                             style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: reviews.length,
                   itemBuilder: (context, i) {
                     final r = reviews[i];
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
+                      margin: EdgeInsets.only(bottom: 10),
                       child: Padding(
-                        padding: const EdgeInsets.all(14),
+                        padding: EdgeInsets.all(14),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Text(r.farmerName,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600)),
-                                const Spacer(),
+                                Text(tr(r.farmerName, context: context),
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600)),
+                                Spacer(),
                                 Row(
                                   children: List.generate(
                                     5,
@@ -227,9 +231,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(r.comment,
-                                style: const TextStyle(color: Colors.black87)),
+                            SizedBox(height: 6),
+                            Text(tr(r.comment, context: context),
+                                style: TextStyle(color: Colors.black87)),
                           ],
                         ),
                       ),

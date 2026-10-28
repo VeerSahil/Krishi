@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../models/survey.dart';
 import '../../services/api_service.dart';
@@ -15,16 +16,16 @@ class PendingSurveysScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: const Text('Process Survey'),
+          title: Text(tr('Process Survey', context: context)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Moisture (%)',
+              Text(
+                tr('Moisture (%)', context: context),
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(
@@ -33,7 +34,8 @@ class PendingSurveysScreen extends StatelessWidget {
                       min: 0,
                       max: 100,
                       divisions: 100,
-                      label: '${moisture.toStringAsFixed(0)}%',
+                      label: tr('${moisture.toStringAsFixed(0)}%',
+                          context: context),
                       activeColor: Colors.green[700],
                       onChanged: (val) => setState(() => moisture = val),
                     ),
@@ -41,19 +43,19 @@ class PendingSurveysScreen extends StatelessWidget {
                   SizedBox(
                     width: 48,
                     child: Text(
-                      '${moisture.toStringAsFixed(0)}%',
-                      style: const TextStyle(fontSize: 13),
+                      tr('${moisture.toStringAsFixed(0)}%', context: context),
+                      style: TextStyle(fontSize: 13),
                       textAlign: TextAlign.end,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Temperature',
+              SizedBox(height: 16),
+              Text(
+                tr('Temperature', context: context),
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: temperatureCategory,
                 decoration: InputDecoration(
@@ -61,13 +63,18 @@ class PendingSurveysScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Low', child: Text('Low (~20°C)')),
+                items: [
                   DropdownMenuItem(
-                      value: 'Moderate', child: Text('Moderate (~28°C)')),
-                  DropdownMenuItem(value: 'High', child: Text('High (~35°C)')),
+                      value: 'Low',
+                      child: Text(tr('Low (~20°C)', context: context))),
+                  DropdownMenuItem(
+                      value: 'Moderate',
+                      child: Text(tr('Moderate (~28°C)', context: context))),
+                  DropdownMenuItem(
+                      value: 'High',
+                      child: Text(tr('High (~35°C)', context: context))),
                 ],
                 onChanged: (val) {
                   if (val != null) setState(() => temperatureCategory = val);
@@ -78,12 +85,12 @@ class PendingSurveysScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(tr('Cancel', context: context)),
             ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: Colors.green[700]),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Process'),
+              child: Text(tr('Process', context: context)),
             ),
           ],
         ),
@@ -101,8 +108,9 @@ class PendingSurveysScreen extends StatelessWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Survey processed successfully'),
+          SnackBar(
+            content:
+                Text(tr('Survey processed successfully', context: context)),
             backgroundColor: Colors.green,
           ),
         );
@@ -111,7 +119,7 @@ class PendingSurveysScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(tr(e.toString(), context: context)),
             backgroundColor: Colors.red,
           ),
         );
@@ -123,10 +131,10 @@ class PendingSurveysScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pending Surveys'),
+        title: Text(tr('Pending Surveys', context: context)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout),
             onPressed: () => AuthService().signOut(),
           ),
         ],
@@ -135,77 +143,80 @@ class PendingSurveysScreen extends StatelessWidget {
         stream: ApiService().pendingSurveysStream(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text(
-                    'Unable to load data. Check your connection and try again.'),
+                child: Text(tr(
+                    'Unable to load data. Check your connection and try again.',
+                    context: context)),
               ),
             );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingWidget(message: 'Loading pending surveys...');
+            return LoadingWidget(message: 'Loading pending surveys...');
           }
           final surveys = snapshot.data ?? [];
           if (surveys.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.check_circle_outline,
                       size: 64, color: Colors.green),
                   SizedBox(height: 12),
-                  Text('No pending surveys',
+                  Text(tr('No pending surveys', context: context),
                       style: TextStyle(color: Colors.grey)),
                 ],
               ),
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             itemCount: surveys.length,
             itemBuilder: (context, i) {
               final s = surveys[i];
               return Card(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: EdgeInsets.only(bottom: 12),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.farmerName,
-                          style: const TextStyle(
+                      Text(tr(s.farmerName, context: context),
+                          style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(s.farmerEmail,
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 13)),
-                      const SizedBox(height: 10),
+                      Text(tr(s.farmerEmail, context: context),
+                          style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      SizedBox(height: 10),
                       Row(
                         children: [
-                          _chip(Icons.location_city, s.city),
-                          const SizedBox(width: 8),
-                          _chip(Icons.landscape, s.soilType),
-                          const SizedBox(width: 8),
-                          _chip(Icons.wb_sunny_outlined, s.season),
+                          _chip(context, Icons.location_city, s.city),
+                          SizedBox(width: 8),
+                          _chip(context, Icons.landscape, s.soilType),
+                          SizedBox(width: 8),
+                          _chip(context, Icons.wb_sunny_outlined, s.season),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       if (s.moisture != null)
                         Text(
-                            'Moisture: ${s.moisture}% | Temp: ${s.temperature}°C',
-                            style: const TextStyle(fontSize: 13))
+                            tr('Moisture: ${s.moisture}% | Temp: ${s.temperature}°C',
+                                context: context),
+                            style: TextStyle(fontSize: 13))
                       else
-                        const Text('⚠ Awaiting on-site measurements',
+                        Text(
+                            tr('⚠ Awaiting on-site measurements',
+                                context: context),
                             style:
                                 TextStyle(color: Colors.orange, fontSize: 13)),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
                           style: FilledButton.styleFrom(
                               backgroundColor: Colors.green[700]),
-                          icon: const Icon(Icons.check),
-                          label: const Text('Mark as Done'),
+                          icon: Icon(Icons.check),
+                          label: Text(tr('Mark as Done', context: context)),
                           onPressed: () => _markDone(context, s),
                         ),
                       ),
@@ -220,9 +231,9 @@ class PendingSurveysScreen extends StatelessWidget {
     );
   }
 
-  Widget _chip(IconData icon, String label) {
+  Widget _chip(BuildContext context, IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.green.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -230,8 +241,9 @@ class PendingSurveysScreen extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, size: 14, color: Colors.green[700]),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.green[700])),
+          SizedBox(width: 4),
+          Text(tr(label, context: context),
+              style: TextStyle(fontSize: 12, color: Colors.green[700])),
         ],
       ),
     );

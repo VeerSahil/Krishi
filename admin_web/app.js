@@ -59,6 +59,43 @@ function detail(target, label, value) {
   wrap.append(node('span', label), node('strong', value ?? '—'));
   target.append(wrap);
 }
+function icon(name) {
+  const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  element.classList.add('ui-icon'); element.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', '/admin/icons.svg#' + name); element.append(use);
+  return element;
+}
+function setListBusy(type, busy) {
+  $('#' + type + '-panel').setAttribute('aria-busy', String(busy));
+}
+function syncSurveyFilters() {
+  for (const chip of document.querySelectorAll('[data-status-chip]')) {
+    chip.setAttribute('aria-pressed', String(chip.dataset.statusChip === $('#survey-status').value));
+  }
+}
+async function openSurveyQueue(status, clearFarmer = true) {
+  if (!state.authenticated) return;
+  if (clearFarmer) state.farmerFilter = null;
+  $('#survey-status').value = status;
+  $('#survey-search').value = '';
+  resetPages('surveys'); syncSurveyFilters();
+  await setView('surveys');
+}
+function renderSurveyProgress(status) {
+  const progress = $('#survey-progress'); progress.replaceChildren();
+  const stages = [['pending', 'Requested'], ['approved', 'Assigned'], ['in_progress', 'On site'],
+    ['awaiting_review', 'In review'], ['completed', 'Released']];
+  const index = stages.findIndex(([key]) => key === (status === 'done' ? 'completed' : status));
+  progress.hidden = index < 0;
+  if (index < 0) return;
+  stages.forEach(([, label], step) => {
+    const item = node('li', label, step <= index ? 'reached' : '');
+    if (step === index) item.setAttribute('aria-current', 'step');
+    progress.append(item);
+  });
+}
+
 function showToast(message) {
   $('#toast').textContent = message;
   $('#toast').hidden = false;
@@ -91,12 +128,14 @@ function logout() {
   state.farmers.rows = [];
   state.surveys.rows = [];
   for (const selector of ['#recent-surveys', '#farmers-table', '#surveys-table',
-    '#status-breakdown', '#survey-details', '#farmer-details', '#farmer-summary', '#support-table']) {
+    '#status-breakdown', '#survey-details', '#farmer-details', '#farmer-summary', '#support-table', '#survey-progress']) {
     $(selector).replaceChildren();
   }
   for (const key of ['farmers', 'pending', 'completed', 'surveys']) {
     $('#stat-' + key).textContent = '—';
   }
+  for (const id of ['queue-pending', 'queue-reports', 'queue-support', 'pending-nav-count', 'support-nav-count']) $('#' + id).textContent = '—';
+  $('#welcome-heading').textContent = 'Welcome back.';
   $('#admin-email').textContent = '';
   $('#survey-result').textContent = '';
   $('#support-message').textContent = ''; $('#support-sender').textContent = ''; $('#support-reply').value = '';
@@ -104,6 +143,8 @@ function logout() {
   $('#dashboard-view').hidden = true;
   $('#login-view').hidden = false;
   $('#password').value = '';
+  $('#password').type = 'password'; $('#toggle-password').textContent = 'Show';
+  $('#toggle-password').setAttribute('aria-pressed', 'false'); $('#toggle-password').setAttribute('aria-label', 'Show password');
   $('#login-error').textContent = '';
   clearError();
   $('#email').focus();
@@ -113,10 +154,17 @@ function renderOverview(data) {
   if (!state.authenticated) return;
   const totals = data.totals;
   for (const key of ['farmers', 'pending', 'completed', 'surveys']) {
-    $('#stat-' + key).textContent = count(key === 'pending' ? totals.pending + totals.awaiting_review : totals[key]);
+    $('#stat-' + key).textContent = count(totals[key]);
   }
   $('#pending-nav-count').textContent = count(totals.pending + totals.awaiting_review);
   $('#support-nav-count').textContent = count(totals.supportOpen);
+  $('#queue-pending').textContent = count(totals.pending);
+  $('#queue-reports').textContent = count(totals.awaiting_review);
+  $('#queue-support').textContent = count(totals.supportOpen);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = String(data.admin?.name || 'Admin').trim().split(/\s+/)[0] || 'Admin';
+  $('#welcome-heading').textContent = greeting + ', ' + firstName + '.';
   $('#admin-email').textContent = data.admin?.email || '';
   $('#admin-avatar').textContent = initials(data.admin?.name || 'Admin');
   const tbody = $('#recent-surveys');
@@ -124,9 +172,11 @@ function renderOverview(data) {
   for (const survey of data.recentSurveys) {
     const row = node('tr');
     cell(row, person(survey.farmerName, date(survey.createdAt)));
-    cell(row, survey.city);
+    const farm = node('div');
+    farm.append(node('strong', survey.farmName || survey.city || 'Farm'), node('small', survey.city || ''));
+    cell(row, farm);
     cell(row, badge(survey.status));
-    cell(row, button('Open ↗', () => openSurvey(survey.surveyId), 'Open survey for ' + survey.farmerName));
+    cell(row, button('View report', () => openSurvey(survey.surveyId), 'Open survey for ' + survey.farmerName));
     tbody.append(row);
   }
   $('#recent-empty').hidden = data.recentSurveys.length > 0;
@@ -135,7 +185,10 @@ function renderOverview(data) {
   for (const [key, label] of [['pending', 'Approval requested'], ['approved', 'Visit approved'], ['in_progress', 'Team on site'], ['awaiting_review', 'Report ready'], ['completed', 'Released'],
     ['rejected', 'Rejected'], ['failed', 'Failed'], ['other', 'Other']]) {
     if (key === 'other' && !totals.other) continue;
-    const row = node('div', null, 'breakdown-row');
+    const row = node('button', null, 'breakdown-row stage-' + key);
+    row.type = 'button'; row.disabled = key === 'other';
+    if (!row.disabled) row.addEventListener('click', () => openSurveyQueue(key));
+    row.setAttribute('aria-label', label + ': ' + count(totals[key]) + '. View surveys');
     const meter = node('meter');
     meter.min = 0; meter.max = Math.max(1, totals.surveys); meter.value = totals[key];
     meter.setAttribute('aria-label', label + ': ' + totals[key]);
@@ -149,6 +202,8 @@ async function refreshDashboard() {
   if (!state.authenticated || state.refreshing) return;
   state.refreshing = true; state.teamMembers = null;
   $('#refresh-button').disabled = true;
+  $('#refresh-button').classList.add('is-refreshing');
+  $('#refresh-button').setAttribute('aria-busy', 'true');
   try {
     const data = await api.request('/admin/overview');
     if (!state.authenticated) return;
@@ -158,7 +213,10 @@ async function refreshDashboard() {
     if (state.view === 'surveys') await loadSurveys();
     if (state.view === 'support') await loadSupport();
   } catch (error) { showError(error); }
-  finally { state.refreshing = false; $('#refresh-button').disabled = false; }
+  finally {
+    state.refreshing = false; $('#refresh-button').disabled = false;
+    $('#refresh-button').classList.remove('is-refreshing'); $('#refresh-button').setAttribute('aria-busy', 'false');
+  }
 }
 
 async function setView(view) {
@@ -173,7 +231,7 @@ async function setView(view) {
   }
   $('#breadcrumb-view').textContent = view[0].toUpperCase() + view.slice(1);
   if (view === 'farmers') await loadFarmers();
-  if (view === 'surveys') await loadSurveys();
+  if (view === 'surveys') { syncSurveyFilters(); await loadSurveys(); }
   if (view === 'support') await loadSupport();
 }
 
@@ -192,6 +250,7 @@ function updatePagination(type) {
 }
 async function loadFarmers() {
   const request = ++state.farmers.request;
+  setListBusy('farmers', true);
   $('#farmers-prev').disabled = $('#farmers-next').disabled = true;
   try {
     const data = await api.request(queryPath('/admin/farmers', {
@@ -203,6 +262,7 @@ async function loadFarmers() {
     renderFarmers();
     updatePagination('farmers');
   } catch (error) { if (request === state.farmers.request) showError(error); }
+  finally { if (request === state.farmers.request) setListBusy('farmers', false); }
 }
 function renderFarmers() {
   const search = $('#farmer-search').value.trim().toLowerCase();
@@ -224,7 +284,9 @@ function renderFarmers() {
 }
 async function loadSurveys() {
   const request = ++state.surveys.request;
+  setListBusy('surveys', true);
   $('#surveys-prev').disabled = $('#surveys-next').disabled = true;
+  syncSurveyFilters();
   try {
     const data = await api.request(queryPath('/admin/surveys', {
       limit: 20, status: $('#survey-status').value, farmer_id: state.farmerFilter,
@@ -233,28 +295,35 @@ async function loadSurveys() {
     if (!state.authenticated || request !== state.surveys.request) return;
     state.surveys.rows = data.surveys;
     state.surveys.next = data.nextCursor;
-    const tbody = $('#surveys-table');
-    tbody.replaceChildren();
-    for (const survey of data.surveys) {
-      const row = node('tr');
-      cell(row, person(survey.farmerName, survey.farmerEmail));
-      const farm = node('div');
-      farm.append(node('strong', survey.city || '—'), node('small', survey.soilType || survey.soil_type || '—'));
-      cell(row, farm);
-      cell(row, date(survey.createdAt));
-      cell(row, badge(survey.status));
-      cell(row, survey.recommended_crop || survey.recommendedCrop || '—');
-      cell(row, button(['pending', 'awaiting_review'].includes(survey.status) ? 'Review ↗' : 'Details ↗',
-        () => openSurvey(survey.surveyId)));
-      tbody.append(row);
-    }
-    $('#surveys-empty').hidden = data.surveys.length > 0;
+    renderSurveys();
     $('#clear-farmer-filter').hidden = !state.farmerFilter;
     $('#survey-subtitle').textContent = state.farmerFilter
       ? 'Survey history for ' + state.farmerName + '.'
       : 'Review requests and track recommendations across all farmers.';
     updatePagination('surveys');
   } catch (error) { if (request === state.surveys.request) showError(error); }
+  finally { if (request === state.surveys.request) setListBusy('surveys', false); }
+}
+function renderSurveys() {
+  const search = $('#survey-search').value.trim().toLowerCase();
+  const rows = state.surveys.rows.filter(survey =>
+    [survey.farmerName, survey.farmerEmail, survey.farmName, survey.city, survey.surveyId,
+      survey.recommended_crop, survey.recommendedCrop].filter(Boolean).join(' ').toLowerCase().includes(search));
+  const tbody = $('#surveys-table'); tbody.replaceChildren();
+  for (const survey of rows) {
+    const row = node('tr');
+    cell(row, person(survey.farmerName, survey.farmerEmail));
+    const farm = node('div');
+    farm.append(node('strong', survey.farmName || survey.city || 'Farm'),
+      node('small', [survey.city, survey.soilType || survey.soil_type].filter(Boolean).join(' · ')));
+    cell(row, farm); cell(row, date(survey.createdAt)); cell(row, badge(survey.status));
+    cell(row, survey.recommended_crop || survey.recommendedCrop || '—');
+    cell(row, button(['pending', 'awaiting_review'].includes(survey.status) ? 'Review survey' : 'View details',
+      () => openSurvey(survey.surveyId), 'Open survey for ' + (survey.farmerName || 'farmer')));
+    tbody.append(row);
+  }
+  $('#surveys-empty').hidden = rows.length > 0;
+  $('#survey-page-label').textContent = count(rows.length) + ' of ' + count(state.surveys.rows.length) + ' surveys on this page';
 }
 function resetPages(type) {
   state[type].cursors = [null]; state[type].page = 0; state[type].next = null;
@@ -269,7 +338,7 @@ async function page(type, direction) {
   else return;
   if (type === 'farmers') { $('#farmer-search').value = ''; await loadFarmers(); }
   else if (type === 'support') await loadSupport();
-  else await loadSurveys();
+  else { $('#survey-search').value = ''; await loadSurveys(); }
 }
 
 async function openFarmer(id) {
@@ -289,7 +358,7 @@ async function openFarmer(id) {
     detail(target, 'Phone', data.farmer.phone || '—');
     detail(target, 'Joined', date(data.farmer.createdAt));
     detail(target, 'Farmer ID', data.farmer.id);
-    for (const [key, label] of [['surveys', 'Surveys'], ['pending', 'Awaiting review'], ['completed', 'Completed']]) {
+    for (const [key, label] of [['surveys', 'Surveys'], ['pending', 'Awaiting approval'], ['completed', 'Completed']]) {
       const item = node('div');
       item.append(node('strong', count(data.stats[key])), node('span', label));
       $('#farmer-summary').append(item);
@@ -318,6 +387,7 @@ async function openSurvey(id) {
   state.activeSurvey = { surveyId: id };
   $('#survey-dialog-title').textContent = 'Loading survey…';
   $('#survey-details').replaceChildren(); $('#survey-result').hidden = true;
+  $('#survey-progress').hidden = true;
   $('#assignment-fields').hidden = $('#survey-actions').hidden = true;
   $('#team-assignee').disabled = true; $('#survey-notes').disabled = true;
   $('#survey-error').textContent = ''; $('#process-form').reset();
@@ -326,6 +396,7 @@ async function openSurvey(id) {
     const data = await api.request('/survey/' + encodeURIComponent(id));
     if (!state.authenticated || state.activeSurvey?.surveyId !== id || !$('#survey-dialog').open) return;
     state.activeSurvey = data;
+    renderSurveyProgress(data.status);
     $('#survey-dialog-title').textContent = data.farmName || data.farmerName || 'Farm survey';
     const target = $('#survey-details');
     for (const [label, value] of [
@@ -342,7 +413,29 @@ async function openSurvey(id) {
     if (data.recommendationNotice) detail(target, 'Demo input', data.recommendationNotice);
     if (data.nitrogen != null) detail(target, 'Manual N / P / K', [data.nitrogen, data.phosphorus, data.potassium].join(' / '));
     if (data.teamNotes) detail(target, 'Field team notes', data.teamNotes);
+    if (data.cropPlan) {
+      detail(target, 'Farmer crop plan', data.cropPlan.proposedCrop);
+      detail(target, 'Planned sowing / irrigation', [data.cropPlan.sowingDate || 'Not specified', data.cropPlan.irrigation].join(' / '));
+    }
+    if (data.fieldEvidence) {
+      const evidence = data.fieldEvidence;
+      detail(target, 'Evidence record ID', evidence.submissionId);
+      detail(target, 'Captured / received', [evidence.capturedAt || 'Not recorded', evidence.receivedAt].join(' / '));
+      detail(target, 'Nutrient evidence', [evidence.nutrientSource, evidence.nutrientUnit, evidence.soilTestReference || 'No soil-test reference'].join(' / '));
+      detail(target, 'Moisture source', evidence.moistureSource);
+      if (evidence.soilTestAttachmentUrl) detail(target, 'Soil report attachment link', evidence.soilTestAttachmentUrl);
+      detail(target, 'Recorded by', evidence.recordedBy);
+    }
     if (data.adminNotes) detail(target, 'Admin notes', data.adminNotes);
+    if (data.emailNotifications?.length) {
+      const mailStates = { queued: 'Queued', sending: 'Sending', sent: 'Accepted by mail provider',
+        failed: 'Sending failed', not_configured: 'Sender setup needed',
+        skipped_no_recipient: 'No valid farmer email', skipped_obsolete: 'Older update skipped' };
+      for (const email of data.emailNotifications) {
+        detail(target, 'Email: ' + (statusNames[email.surveyStatus] || email.surveyStatus),
+          mailStates[email.deliveryStatus] || email.deliveryStatus);
+      }
+    }
     const prediction = data.status === 'awaiting_review' ? data.draftPrediction : data;
     if (prediction?.recommended_crop || prediction?.recommendedCrop) {
       $('#survey-result').textContent = (data.status === 'awaiting_review'
@@ -363,7 +456,7 @@ async function openSurvey(id) {
     $('#survey-actions').hidden = !canReject;
     $('#reject-survey').hidden = !canReject;
     $('#approve-survey').hidden = !(canApprove || canPublish);
-    $('#approve-survey').textContent = canPublish ? 'Release recommendation to farmer ↗' : 'Approve visit & assign team ↗';
+    $('#approve-survey').textContent = canPublish ? 'Release to farmer' : 'Approve & assign visit';
     $('#approve-survey').disabled = true; $('#reject-survey').disabled = false;
     if (canApprove) {
       const members = await loadTeamMembers();
@@ -405,6 +498,7 @@ async function processSurvey(action) {
 
 async function loadSupport() {
   const request = ++state.support.request;
+  setListBusy('support', true);
   try {
     const data = await api.request(queryPath('/admin/support', { limit: 20, cursor: state.support.cursors[state.support.page] }));
     if (!state.authenticated || request !== state.support.request) return;
@@ -429,6 +523,7 @@ async function loadSupport() {
     $('#support-empty').hidden = data.messages.length > 0;
     updatePagination('support');
   } catch (error) { if (request === state.support.request) showError(error); }
+  finally { if (request === state.support.request) setListBusy('support', false); }
 }
 
 $('#login-form').addEventListener('submit', async event => {
@@ -448,17 +543,32 @@ $('#login-form').addEventListener('submit', async event => {
     await setView('overview');
     state.timer = setInterval(() => { if (!document.hidden) refreshDashboard(); }, 30000);
   } catch (error) { $('#login-error').textContent = error.message; }
-  finally { $('#login-submit').disabled = !api.config?.configured; $('#login-submit').textContent = 'Sign in to workspace ↗'; }
+  finally { $('#login-submit').disabled = !api.config?.configured; $('#login-submit').textContent = 'Sign in to workspace'; }
 });
 $('#sign-out').addEventListener('click', logout);
 $('#mobile-sign-out').addEventListener('click', logout);
 $('#refresh-button').addEventListener('click', refreshDashboard);
 for (const nav of document.querySelectorAll('[data-view]')) nav.addEventListener('click', () => setView(nav.dataset.view));
 for (const link of document.querySelectorAll('[data-open-view]')) link.addEventListener('click', () => setView(link.dataset.openView));
-$('#open-pending').addEventListener('click', () => {
-  state.farmerFilter = null; $('#survey-status').value = 'pending'; resetPages('surveys'); setView('surveys');
+$('#open-pending').addEventListener('click', () => openSurveyQueue('pending'));
+for (const link of document.querySelectorAll('[data-survey-status]')) {
+  link.addEventListener('click', () => openSurveyQueue(link.dataset.surveyStatus));
+}
+for (const chip of document.querySelectorAll('[data-status-chip]')) {
+  chip.addEventListener('click', () => openSurveyQueue(chip.dataset.statusChip, false));
+}
+$('#survey-status').addEventListener('change', () => {
+  $('#survey-search').value = ''; resetPages('surveys'); syncSurveyFilters(); loadSurveys();
 });
-$('#survey-status').addEventListener('change', () => { resetPages('surveys'); loadSurveys(); });
+$('#survey-search').addEventListener('input', renderSurveys);
+$('#toggle-password').addEventListener('click', () => {
+  const showing = $('#password').type !== 'password';
+  $('#password').type = showing ? 'password' : 'text';
+  $('#toggle-password').textContent = showing ? 'Show' : 'Hide';
+  $('#toggle-password').setAttribute('aria-pressed', String(!showing));
+  $('#toggle-password').setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+});
+$('#today-label').textContent = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date());
 $('#farmer-search').addEventListener('input', renderFarmers);
 for (const type of ['farmers', 'surveys', 'support']) {
   $('#' + type + '-prev').addEventListener('click', () => page(type, -1));
@@ -472,7 +582,7 @@ $('#close-farmer').addEventListener('click', () => $('#farmer-dialog').close());
 $('#view-farmer-surveys').addEventListener('click', () => {
   state.farmerFilter = state.activeFarmer;
   $('#farmer-dialog').close();
-  $('#survey-status').value = ''; resetPages('surveys'); setView('surveys');
+  openSurveyQueue('', false);
 });
 $('#process-form').addEventListener('submit', event => { event.preventDefault(); processSurvey(state.activeSurvey?.status === 'awaiting_review' ? 'publish' : 'approve'); });
 $('#reject-survey').addEventListener('click', () => processSurvey('reject'));
@@ -486,7 +596,7 @@ $('#support-form').addEventListener('submit', async event => {
     await api.request('/admin/support/' + encodeURIComponent(state.activeThread.threadId) + '/reply',
       { method: 'POST', body: { reply: $('#support-reply').value.trim() } });
     if (!state.authenticated) return;
-    $('#support-dialog').close(); showToast('Reply sent to the farmer.'); await loadSupport();
+    $('#support-dialog').close(); showToast('Reply sent to the farmer.'); await refreshDashboard();
   } catch (error) { $('#support-error').textContent = error.message; }
   finally { $('#send-reply').disabled = false; }
 });
@@ -494,7 +604,7 @@ $('#support-form').addEventListener('submit', async event => {
 try {
   const config = await api.loadConfig();
   $('#login-submit').disabled = !config.configured;
-  $('#login-submit').textContent = 'Sign in to workspace ↗';
+  $('#login-submit').textContent = 'Sign in to workspace';
   if (!config.configured) $('#login-error').textContent = 'Administrator sign-in needs configuration. Contact your project administrator.';
 } catch (error) {
   $('#login-error').textContent = error.message + ' Reload this page to reconnect.';

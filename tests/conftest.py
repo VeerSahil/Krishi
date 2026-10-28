@@ -143,7 +143,7 @@ def api(monkeypatch):
 
     main.app.dependency_overrides[main.get_db] = lambda: db
     main.app.dependency_overrides[main.get_current_user] = identity
-    for name in ("SMTP_EMAIL", "SMTP_PASSWORD", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+    for name in ("SMTP_EMAIL", "SMTP_PASSWORD", "EMAIL_FROM", "EMAIL_PROVIDER", "EMAIL_STATUSES", "RESEND_API_KEY", "GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "GMAIL_REFRESH_TOKEN", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     with TestClient(main.app, backend_options=backend_options()) as client:
         yield client, db

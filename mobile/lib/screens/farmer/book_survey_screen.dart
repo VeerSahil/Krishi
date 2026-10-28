@@ -1,3 +1,4 @@
+import '../../services/app_language.dart';
 import 'package:flutter/material.dart';
 import '../../auth/auth_service.dart';
 import '../../services/api_service.dart';
@@ -42,14 +43,15 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
         contactPhone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Request sent. Admin will approve and assign your farm visit.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr(
+              'Request sent. Admin will approve and assign your farm visit.',
+              context: context))));
       Navigator.pop(context);
     } on Exception catch (error) {
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr(error.toString(), context: context))));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -59,10 +61,11 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
       ValueChanged<String?> changed) {
     return DropdownButtonFormField<String>(
       value: value,
-      decoration:
-          InputDecoration(labelText: label, border: const OutlineInputBorder()),
+      decoration: InputDecoration(
+          labelText: tr(label, context: context), border: OutlineInputBorder()),
       items: options
-          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .map((item) => DropdownMenuItem(
+              value: item, child: Text(tr(item, context: context))))
           .toList(),
       onChanged: _loading ? null : changed,
     );
@@ -71,52 +74,61 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Request a farm survey')),
+      appBar:
+          AppBar(title: Text(tr('Request a farm survey', context: context))),
       body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20),
           child: Form(
             key: _formKey,
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Where should our field team visit?',
+                  Text(
+                      tr('Where should our field team visit?',
+                          context: context),
                       style:
                           TextStyle(fontSize: 21, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 10),
-                  const Text(
-                      'After admin approves your request, a team member will visit the farm and collect the readings.',
+                  SizedBox(height: 10),
+                  Text(
+                      tr('After admin approves your request, a team member will visit the farm and collect the readings.',
+                          context: context),
                       style: TextStyle(color: Colors.grey, height: 1.6)),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   TextFormField(
                       controller: _farmName,
                       maxLength: 100,
-                      decoration: const InputDecoration(
-                          labelText: 'Farm name', border: OutlineInputBorder()),
+                      decoration: InputDecoration(
+                          labelText: tr('Farm name', context: context),
+                          border: OutlineInputBorder()),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Enter a farm name'
+                              ? tr('Enter a farm name', context: context)
                               : null),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   TextFormField(
                       controller: _address,
                       minLines: 2,
                       maxLines: 4,
                       maxLength: 500,
-                      decoration: const InputDecoration(
-                          labelText: 'Farm address and landmarks',
+                      decoration: InputDecoration(
+                          labelText: tr('Farm address and landmarks',
+                              context: context),
                           border: OutlineInputBorder()),
                       validator: (value) =>
                           value == null || value.trim().length < 8
-                              ? 'Enter an address the team can find'
+                              ? tr('Enter an address the team can find',
+                                  context: context)
                               : null),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   TextFormField(
                       controller: _phone,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                          labelText: 'Visit contact phone (optional)',
-                          helperText:
+                      decoration: InputDecoration(
+                          labelText: tr('Visit contact phone (optional)',
+                              context: context),
+                          helperText: tr(
                               'Your account phone is used if left blank.',
+                              context: context),
                           border: OutlineInputBorder()),
                       validator: (value) => value == null ||
                               value.trim().isEmpty
@@ -124,13 +136,13 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
                           : RegExp(r'^[+0-9() -]{7,25}$').hasMatch(value.trim())
                               ? null
                               : 'Enter a valid contact number'),
-                  const SizedBox(height: 22),
+                  SizedBox(height: 22),
                   choice(
                       'Farm city',
                       _city,
                       ['Pune', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad'],
                       (value) => setState(() => _city = value!)),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   choice(
                       'Soil type',
                       _soilType,
@@ -147,12 +159,12 @@ class _BookSurveyScreenState extends State<BookSurveyScreen> {
                         'Chalky'
                       ],
                       (value) => setState(() => _soilType = value!)),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   choice('Season', _season, ['Summer', 'Monsoon', 'Winter'],
                       (value) => setState(() => _season = value!)),
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28),
                   CustomButton(
-                      label: 'Send survey request',
+                      label: tr('Send survey request', context: context),
                       icon: Icons.send,
                       loading: _loading,
                       onPressed: _submit),
